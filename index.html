@@ -1,7 +1,29 @@
 <script>
   "use strict";
 
-  document.getElementById("origin").textContent = location.origin;
+  // --- arranque seguro: espera al DOM y crea #origin si no existe ---
+  (function initOrigin() {
+    function setOrigin() {
+      var logEl = document.getElementById("log");
+      var span = document.getElementById("origin");
+      if (!span) {
+        span = document.createElement("span");
+        span.id = "origin";
+        if (logEl) {
+          logEl.appendChild(document.createTextNode(" "));
+          logEl.appendChild(span);
+        } else {
+          document.body.appendChild(span);
+        }
+      }
+      span.textContent = location.origin;
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", setOrigin, { once: true });
+    } else {
+      setOrigin();
+    }
+  })();
 
   function toStr(v){ return (v == null) ? "" : String(v); }
   function esc(v){ return '"' + toStr(v).replace(/"/g, '""') + '"'; }
@@ -21,20 +43,17 @@
     console.log("[Extractor]", msg);
   }
 
-  // Mensajes útiles según status de Places
   const helpByStatus = {
     REQUEST_DENIED:
-      "- Verifica que tu proyecto tiene BILLING activado.\n" +
-      "- En Credenciales → tu API key → API restrictions: incluye Maps JavaScript API y Places API.\n" +
-      "- En Application restrictions: HTTP referrers y agrega " + location.origin + "/*",
+      "- Verifica BILLING.\n- En tu API key: API restrictions (Maps JS + Places).\n- En Application restrictions: HTTP referrers y agrega " + location.origin + "/*",
     INVALID_REQUEST:
-      "- Revisa parámetros: query, location y radius (usa números válidos).",
+      "- Revisa query / location / radius.",
     OVER_QUERY_LIMIT:
-      "- Estás excediendo cuota. Baja velocidad o espera y vuelve a intentar.",
+      "- Superaste cuota. Baja velocidad o espera.",
     UNKNOWN_ERROR:
-      "- Error temporal de Google. Reintenta.",
+      "- Error temporal. Reintenta.",
     ZERO_RESULTS:
-      "- Sin resultados con esa query/radio. Prueba un radio mayor o otra ciudad."
+      "- Sin resultados. Aumenta radio o cambia query."
   };
 
   document.getElementById("run").addEventListener("click", () => {
@@ -49,13 +68,8 @@
     const s = document.createElement("script");
     s.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(key) + "&libraries=places&v=quarterly";
     s.async = true; s.defer = true; s.dataset.dyn = "mapsjs";
-    s.onload = () => {
-      log("Maps JS cargado ✓");
-      start();
-    };
-    s.onerror = () => {
-      log("No se pudo cargar Google Maps JS API. Revisa tu API key, restricciones de dominio y que Places + Maps JS estén habilitadas.");
-    };
+    s.onload = () => { log("Maps JS cargado ✓"); start(); };
+    s.onerror = () => { log("No se pudo cargar Google Maps JS API. Revisa key/restricciones/APIs."); };
     document.body.appendChild(s);
   });
 
@@ -67,13 +81,9 @@
 
     log(`Inicializando búsqueda… query="${q}", lat=${lat}, lng=${lng}, radius=${radius}`);
 
-    const dummy = document.createElement("div");
-    dummy.style.width = "0"; dummy.style.height = "0";
-    document.body.appendChild(dummy);
-
-    let center;
-    if (isFinite(lat) && isFinite(lng)) center = new google.maps.LatLng(lat, lng);
-    else { center = new google.maps.LatLng(23.2167, -106.4167); log("Lat/Lng inválidos. Usando Mazatlán por defecto."); }
+    const dummy = document.createElement("div"); dummy.style.width = "0"; dummy.style.height = "0"; document.body.appendChild(dummy);
+    const center = (isFinite(lat) && isFinite(lng)) ? new google.maps.LatLng(lat, lng) : new google.maps.LatLng(23.2167, -106.4167);
+    if (!isFinite(lat) || !isFinite(lng)) log("Lat/Lng inválidos. Usando Mazatlán por defecto.");
 
     const map = new google.maps.Map(dummy, { center, zoom: 14 });
     const service = new google.maps.places.PlacesService(map);
@@ -88,12 +98,10 @@
         return;
       }
       const place = allPlaces[i];
-      const fields = [
-        "name","types","website","formatted_phone_number","international_phone_number",
-        "formatted_address","address_components","rating","user_ratings_total","url"
-      ];
+      const fields = ["name","types","website","formatted_phone_number","international_phone_number","formatted_address","address_components","rating","user_ratings_total","url"];
+
       service.getDetails({ placeId: place.place_id, fields }, (detail, status) => {
-        log(`getDetails status: ${status} ${detail && detail.name ? "→ " + detail.name : ""}`);
+        log(`getDetails status: ${status}${detail && detail.name ? " → " + detail.name : ""}`);
         if (status === google.maps.places.PlacesServiceStatus.OK && detail) {
           let city = "", state = "";
           (detail.address_components || []).forEach(c => {
@@ -113,9 +121,9 @@
             reviews: "",
             maplink: detail.url || ""
           });
-        } else if (status !== google.maps.places.PlacesServiceStatus.OK) {
+        } else {
           const tip = helpByStatus[status] || "";
-          if (tip) log("Pista: \n" + tip);
+          if (tip) log("Pista:\n" + tip);
         }
         setTimeout(() => fetchDetailsNext(i+1), 200);
       });
@@ -133,10 +141,10 @@
           fetchDetailsNext(0);
         }
       } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-        log("Sin resultados. Prueba con un radio mayor o una query diferente.");
+        log("Sin resultados. Prueba mayor radio o query diferente.");
       } else {
         const tip = helpByStatus[status] || "";
-        if (tip) log("Pista: \n" + tip);
+        if (tip) log("Pista:\n" + tip);
       }
     }
 
