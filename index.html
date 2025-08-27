@@ -20,17 +20,17 @@
 </head>
 <body>
   <h1>Extraer Restaurantes con Google Places</h1>
-  <p class="hint"><strong>Paso 4:</strong> Pega tu API key de <em>Google Maps Platform</em> (con <code>Places API</code> y <code>Maps JavaScript API</code> habilitadas) y lanza la búsqueda.</p>
+  <p class="hint"><strong>Paso 4:</strong> Pega tu API key de Google Maps Platform (con <code>Places API</code> y <code>Maps JavaScript API</code> habilitadas) y lanza la búsqueda.</p>
 
   <label>API Key</label>
-  <input id="apiKey" placeholder="AIza... (tu key)"/>
+  <input id="apiKey" placeholder="AIza... (tu key)" />
 
   <label>Búsqueda</label>
   <input id="query" value="restaurantes" />
 
   <label>Centro (lat, lng)</label>
   <div class="row">
-    <input id="lat" value="23.2167" /> 
+    <input id="lat" value="23.2167" />
     <input id="lng" value="-106.4167" />
   </div>
   <div class="hint">Ejemplo: Mazatlán, Sinaloa</div>
@@ -42,110 +42,118 @@
     <button id="run">Buscar y generar CSV</button>
   </div>
 
-  <div id="log">Listo para iniciar…</div>
+  <div id="log">Origen detectado: <span id="origin"></span></div>
 
   <script>
+    "use strict";
+
+    // Mostrar el origin real (útil para Website restrictions de la API key)
+    document.getElementById("origin").textContent = location.origin;
+
+    function toStr(v){ return (v === null || v === undefined) ? "" : String(v); }
+    function esc(v){ return '"' + toStr(v).replace(/"/g, '""') + '"'; }
+
     function downloadCSV(filename, rows) {
-      if (!rows.length) return alert("No hay filas.");
-      const headers = Object.keys(rows[0]);
-      const esc = v => \"\""+(v ?? \"\").toString().replace(/\"/g,'\"\"')+\"\"\";
-      const csv = [headers.map(esc).join(",")]
-        .concat(rows.map(r => headers.map(h => esc(r[h])).join(",")))
-        .join("\n");
-      const blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
+      if (!rows.length) { alert("No hay filas."); return; }
+      var headers = Object.keys(rows[0]);
+      var lines = [];
+      lines.push(headers.map(esc).join(","));
+      for (var i=0; i<rows.length; i++){
+        var r = rows[i];
+        lines.push(headers.map(function(h){ return esc(r[h]); }).join(","));
+      }
+      var csv = lines.join("\n");
+      var blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
       a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
       URL.revokeObjectURL(url);
     }
-    function log(msg){ document.getElementById("log").textContent += (document.getElementById("log").textContent?"\n":"") + msg; }
 
-    document.getElementById("run").addEventListener("click", () => {
-      const key = document.getElementById("apiKey").value.trim();
-      if (!key) return alert("Coloca tu API key.");
-      const existing = document.querySelector('script[data-dyn="mapsjs"]');
+    function log(msg){
+      var el = document.getElementById("log");
+      el.textContent = (el.textContent ? el.textContent + "\n" : "") + msg;
+    }
+
+    document.getElementById("run").addEventListener("click", function(){
+      var key = document.getElementById("apiKey").value.trim();
+      if (!key) { alert("Coloca tu API key."); return; }
+
+      // Quitar script previo si existe
+      var existing = document.querySelector('script[data-dyn="mapsjs"]');
       if (existing) existing.remove();
-      const s = document.createElement("script");
-      s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&v=quarterly`;
+
+      // Cargar Google Maps JS (Places)
+      var s = document.createElement("script");
+      s.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(key) + "&libraries=places&v=quarterly";
       s.async = true; s.defer = true; s.dataset.dyn = "mapsjs";
       s.onload = start;
+      s.onerror = function(){
+        log("No se pudo cargar Google Maps JS API. Revisa tu API key, las restricciones de dominio y que Places + Maps JS estén habilitadas.");
+      };
       document.body.appendChild(s);
     });
 
     function start() {
-      const q = document.getElementById("query").value.trim();
-      const lat = parseFloat(document.getElementById("lat").value);
-      const lng = parseFloat(document.getElementById("lng").value);
-      const radius = parseInt(document.getElementById("radius").value, 10) || 3000;
+      var q = document.getElementById("query").value.trim();
+      var lat = parseFloat(document.getElementById("lat").value);
+      var lng = parseFloat(document.getElementById("lng").value);
+      var radius = parseInt(document.getElementById("radius").value, 10) || 3000;
 
-      document.getElementById("log").textContent = "Inicializando búsqueda…";
+      document.getElementById("log").textContent = "Inicializando búsqueda…\nOrigen detectado: " + location.origin;
 
-      const dummy = document.createElement("div"); dummy.style.width = "0"; dummy.style.height = "0"; document.body.appendChild(dummy);
+      var dummy = document.createElement("div");
+      dummy.style.width = "0"; dummy.style.height = "0"; document.body.appendChild(dummy);
 
-      const center = new google.maps.LatLng(lat, lng);
-      const map = new google.maps.Map(dummy, { center, zoom: 14 });
-      const service = new google.maps.places.PlacesService(map);
+      var center = new google.maps.LatLng(lat, lng);
+      var map = new google.maps.Map(dummy, { center: center, zoom: 14 });
+      var service = new google.maps.places.PlacesService(map);
 
-      const allPlaces = [];
-      const rows = [];
+      var allPlaces = [];
+      var rows = [];
 
       function fetchDetailsNext(idx) {
         if (idx >= allPlaces.length) {
-          log(`\nListo. Total filas: ${rows.length}`);
+          log("\nListo. Total filas: " + rows.length);
           downloadCSV("restaurantes.csv", rows);
           return;
         }
-        const place = allPlaces[idx];
-        const fields = [
+        var place = allPlaces[idx];
+        var fields = [
           "name","types","website","formatted_phone_number","international_phone_number",
           "formatted_address","address_components","rating","user_ratings_total","url"
         ];
-        service.getDetails({ placeId: place.place_id, fields }, (detail, status) => {
+        service.getDetails({ placeId: place.place_id, fields: fields }, function(detail, status){
           if (status === google.maps.places.PlacesServiceStatus.OK && detail) {
-            let city = "", state = "";
-            (detail.address_components||[]).forEach(c=>{
-              if (c.types.includes("locality")||c.types.includes("sublocality")) city=c.long_name;
-              if (c.types.includes("administrative_area_level_1")) state=c.long_name;
+            var city = "", state = "";
+            (detail.address_components || []).forEach(function(c){
+              if (c.types.indexOf("locality") !== -1 || c.types.indexOf("sublocality") !== -1) city = c.long_name;
+              if (c.types.indexOf("administrative_area_level_1") !== -1) state = c.long_name;
             });
             rows.push({
               company_name: detail.name || "",
-              category: (detail.types||[]).join("|"),
+              category: (detail.types || []).join("|"),
               website: detail.website || "",
               phone: detail.formatted_phone_number || detail.international_phone_number || "",
               email: "",
               address: detail.formatted_address || "",
-              city, state,
-              rating: detail.rating ?? "",
-              rating_count: detail.user_ratings_total ?? "",
+              city: city, state: state,
+              rating: (detail.rating != null ? detail.rating : ""),
+              rating_count: (detail.user_ratings_total != null ? detail.user_ratings_total : ""),
               reviews: "",
               maplink: detail.url || ""
             });
+            log("Detalle " + (idx+1) + "/" + allPlaces.length + ": " + (detail.name || place.place_id));
           } else {
-            log(`\nDetalles fallidos para ${place.name || place.place_id}: ${status}`);
+            log("Detalles fallidos para " + (place.name || place.place_id) + ": " + status);
           }
-          setTimeout(()=>fetchDetailsNext(idx+1), 140);
+          setTimeout(function(){ fetchDetailsNext(idx+1); }, 180);
         });
       }
 
       function handleTextSearch(results, status, pagination) {
-        if (status === google.maps.places.PlacesServiceStatus.OK && results?.length) {
-          allPlaces.push(...results);
-          log(`\nResultados acumulados: ${allPlaces.length}`);
+        if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length) {
+          Array.prototype.push.apply(allPlaces, results);
+          log("Resultados acumulados: " + allPlaces.length);
           if (pagination && pagination.hasNextPage) {
-            setTimeout(()=>pagination.nextPage(), 2000);
-          } else {
-            log("\nDescargando detalles de cada lugar…");
-            fetchDetailsNext(0);
-          }
-        } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-          log("\nSin resultados.");
-        } else {
-          log(`\nTextSearch error: ${status}`);
-        }
-      }
-
-      service.textSearch({ query: q, location: center, radius }, handleTextSearch);
-    }
-  </script>
-</body>
-</html>
+            setTimeout(function(){ pagination.nextP
