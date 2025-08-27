@@ -1,32 +1,19 @@
 <script>
-  "use strict";
+"use strict";
 
-  // --- arranque seguro: espera al DOM y crea #origin si no existe ---
-  (function initOrigin() {
-    function setOrigin() {
-      var logEl = document.getElementById("log");
-      var span = document.getElementById("origin");
-      if (!span) {
-        span = document.createElement("span");
-        span.id = "origin";
-        if (logEl) {
-          logEl.appendChild(document.createTextNode(" "));
-          logEl.appendChild(span);
-        } else {
-          document.body.appendChild(span);
-        }
-      }
-      span.textContent = location.origin;
-    }
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", setOrigin, { once: true });
-    } else {
-      setOrigin();
-    }
-  })();
+document.addEventListener("DOMContentLoaded", () => {
+  // --- DOM listo: referencias seguras ---
+  const originSpan = document.getElementById("origin");
+  if (originSpan) originSpan.textContent = location.origin;
 
-  function toStr(v){ return (v == null) ? "" : String(v); }
-  function esc(v){ return '"' + toStr(v).replace(/"/g, '""') + '"'; }
+  const runBtn = document.getElementById("run");
+  if (!runBtn) {
+    console.error("No encontré el botón #run. Verifica que exista <button id=\"run\">…</button>.");
+    return;
+  }
+
+  function toStr(v){ return v == null ? "" : String(v); }
+  function esc(v){ return '"' + toStr(v).replace(/"/g,'""') + '"'; }
   function downloadCSV(filename, rows){
     if (!rows.length) { alert("No hay filas."); return; }
     const headers = Object.keys(rows[0]);
@@ -45,22 +32,18 @@
 
   const helpByStatus = {
     REQUEST_DENIED:
-      "- Verifica BILLING.\n- En tu API key: API restrictions (Maps JS + Places).\n- En Application restrictions: HTTP referrers y agrega " + location.origin + "/*",
-    INVALID_REQUEST:
-      "- Revisa query / location / radius.",
-    OVER_QUERY_LIMIT:
-      "- Superaste cuota. Baja velocidad o espera.",
-    UNKNOWN_ERROR:
-      "- Error temporal. Reintenta.",
-    ZERO_RESULTS:
-      "- Sin resultados. Aumenta radio o cambia query."
+      "- Activa BILLING.\n- API restrictions: Maps JavaScript API + Places API.\n- Application restrictions: HTTP referrers e incluye " + location.origin + "/*",
+    INVALID_REQUEST: "- Revisa query/location/radius.",
+    OVER_QUERY_LIMIT: "- Excediste cuota; baja velocidad o espera.",
+    UNKNOWN_ERROR: "- Error temporal. Reintenta.",
+    ZERO_RESULTS: "- Sin resultados; aumenta radio o cambia query."
   };
 
-  document.getElementById("run").addEventListener("click", () => {
+  runBtn.addEventListener("click", () => {
     const key = document.getElementById("apiKey").value.trim();
     if (!key) { alert("Coloca tu API key."); return; }
 
-    // Limpia scripts previos
+    // quita cargas previas
     const existing = document.querySelector('script[data-dyn="mapsjs"]');
     if (existing) existing.remove();
 
@@ -103,8 +86,8 @@
       service.getDetails({ placeId: place.place_id, fields }, (detail, status) => {
         log(`getDetails status: ${status}${detail && detail.name ? " → " + detail.name : ""}`);
         if (status === google.maps.places.PlacesServiceStatus.OK && detail) {
-          let city = "", state = "";
-          (detail.address_components || []).forEach(c => {
+          let city="", state="";
+          (detail.address_components||[]).forEach(c=>{
             if (c.types.includes("locality") || c.types.includes("sublocality")) city = c.long_name;
             if (c.types.includes("administrative_area_level_1")) state = c.long_name;
           });
@@ -154,4 +137,5 @@
       log("Excepción al llamar textSearch: " + e.message);
     }
   }
+});
 </script>
