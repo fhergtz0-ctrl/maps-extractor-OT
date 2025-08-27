@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Extracto de Restaurantes (Google Places)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 20px; max-width: 920px; }
+    h1 { margin-bottom: 4px; }
+    label { display:block; margin: 10px 0 4px; font-weight: 600; }
+    input, button { padding: 8px; }
+    input { width: 100%; max-width: 420px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    #log { margin-top: 12px; white-space: pre-wrap; font-size: 14px; background:#f7f7f7; padding:10px; border-radius:8px; min-height: 80px; }
+    .hint { color:#555; font-size: 12px; }
+    .bar { display:flex; gap:12px; align-items:center; margin-top:12px; }
+    .bar button { border-radius: 8px; border: 1px solid #e5e5e5; background:#fff; cursor:pointer; }
+    .bar button:hover { background:#f5f5f5; }
+  </style>
+</head>
+<body>
+  <h1>Extraer Restaurantes con Google Places</h1>
+  <p class="hint"><strong>Paso 4:</strong> Pega tu API key de <em>Google Maps Platform</em> (con <code>Places API</code> y <code>Maps JavaScript API</code> habilitadas) y lanza la búsqueda.</p>
+
+  <label>API Key</label>
+  <input id="apiKey" placeholder="AIza... (tu key)"/>
+
+  <label>Búsqueda</label>
+  <input id="query" value="restaurantes" />
+
+  <label>Centro (lat, lng)</label>
+  <div class="row">
+    <input id="lat" value="23.2167" /> 
+    <input id="lng" value="-106.4167" />
+  </div>
+  <div class="hint">Ejemplo: Mazatlán, Sinaloa</div>
+
+  <label>Radio (metros)</label>
+  <input id="radius" value="5000" />
+
+  <div class="bar">
+    <button id="run">Buscar y generar CSV</button>
+  </div>
+
+  <div id="log">Listo para iniciar…</div>
+
+  <script>
+    function downloadCSV(filename, rows) {
+      if (!rows.length) return alert("No hay filas.");
+      const headers = Object.keys(rows[0]);
+      const esc = v => \"\""+(v ?? \"\").toString().replace(/\"/g,'\"\"')+\"\"\";
+      const csv = [headers.map(esc).join(",")]
+        .concat(rows.map(r => headers.map(h => esc(r[h])).join(",")))
+        .join("\n");
+      const blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    }
+    function log(msg){ document.getElementById("log").textContent += (document.getElementById("log").textContent?"\n":"") + msg; }
+
+    document.getElementById("run").addEventListener("click", () => {
+      const key = document.getElementById("apiKey").value.trim();
+      if (!key) return alert("Coloca tu API key.");
+      const existing = document.querySelector('script[data-dyn="mapsjs"]');
+      if (existing) existing.remove();
+      const s = document.createElement("script");
+      s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&v=quarterly`;
+      s.async = true; s.defer = true; s.dataset.dyn = "mapsjs";
+      s.onload = start;
+      document.body.appendChild(s);
+    });
+
+    function start() {
+      const q = document.getElementById("query").value.trim();
+      const lat = parseFloat(document.getElementById("lat").value);
+      const lng = parseFloat(document.getElementById("lng").value);
+      const radius = parseInt(document.getElementById("radius").value, 10) || 3000;
+
+      document.getElementById("log").textContent = "Inicializando búsqueda…";
+
+      const dummy = document.createElement("div"); dummy.style.width = "0"; dummy.style.height = "0"; document.body.appendChild(dummy);
+
+      const center = new google.maps.LatLng(lat, lng);
+      const map = new google.maps.Map(dummy, { center, zoom: 14 });
+      const service = new google.maps.places.PlacesService(map);
+
+      const allPlaces = [];
+      const rows = [];
+
+      function fetchDetailsNext(idx) {
+        if (idx >= allPlaces.length) {
+          log(`\nListo. Total filas: ${rows.length}`);
+          downloadCSV("restaurantes.csv", rows);
+          return;
+        }
+        const place = allPlaces[idx];
+        const fields = [
+          "name","types","website","formatted_phone_number","international_phone_number",
+          "formatted_address","address_components","rating","user_ratings_total","url"
+        ];
+        service.getDetails({ placeId: place.place_id, fields }, (detail, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && detail) {
+            let city = "", state = "";
+            (detail.address_components||[]).forEach(c=>{
+              if (c.types.includes("locality")||c.types.includes("sublocality")) city=c.long_name;
+              if (c.types.includes("administrative_area_level_1")) state=c.long_name;
+            });
+            rows.push({
+              company_name: detail.name || "",
+              category: (detail.types||[]).join("|"),
+              website: detail.website || "",
+              phone: detail.formatted_phone_number || detail.international_phone_number || "",
+              email: "",
+              address: detail.formatted_address || "",
+              city, state,
+              rating: detail.rating ?? "",
+              rating_count: detail.user_ratings_total ?? "",
+              reviews: "",
+              maplink: detail.url || ""
+            });
+          } else {
+            log(`\nDetalles fallidos para ${place.name || place.place_id}: ${status}`);
+          }
+          setTimeout(()=>fetchDetailsNext(idx+1), 140);
+        });
+      }
+
+      function handleTextSearch(results, status, pagination) {
+        if (status === google.maps.places.PlacesServiceStatus.OK && results?.length) {
+          allPlaces.push(...results);
+          log(`\nResultados acumulados: ${allPlaces.length}`);
+          if (pagination && pagination.hasNextPage) {
+            setTimeout(()=>pagination.nextPage(), 2000);
+          } else {
+            log("\nDescargando detalles de cada lugar…");
+            fetchDetailsNext(0);
+          }
+        } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+          log("\nSin resultados.");
+        } else {
+          log(`\nTextSearch error: ${status}`);
+        }
+      }
+
+      service.textSearch({ query: q, location: center, radius }, handleTextSearch);
+    }
+  </script>
+</body>
+</html>
