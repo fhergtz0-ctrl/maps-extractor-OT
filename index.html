@@ -34,4 +34,330 @@
 
     .toolbar{background:var(--card); border:1px solid var(--border); border-radius:14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px}
     .badge{background:#111827; color:#e5e7eb; border:1px solid var(--border); padding:10px 14px; border-radius:12px; font-weight:800; font-size:18px}
-    .btn{padding:1
+    .btn{padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--muted); cursor:pointer; font-weight:600}
+    .btn.primary{background:var(--primary); color:#041e10; border-color:transparent}
+    .btn:disabled{opacity:.6; cursor:not-allowed}
+    .checkpill{display:inline-flex; align-items:center; gap:8px; border:1px solid var(--border); padding:8px 12px; border-radius:10px; background:var(--muted); font-size:14px}
+    .searchbox{flex:1; min-width:220px}
+    .panel{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px}
+    #log{white-space:pre-wrap; font-size:12px; background:var(--muted); padding:10px; border-radius:10px; min-height:56px}
+
+    table{width:100%; border-collapse:collapse}
+    thead th{position:sticky; top:0; background:var(--card); z-index:1}
+    th,td{border-bottom:1px solid var(--border); padding:8px 10px; text-align:left; font-size:13px; vertical-align:top}
+    thead input{width:100%; padding:6px 8px; font-size:12px; margin-top:4px; border-radius:8px; border:1px solid var(--border); background:var(--muted); color:var(--text)}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <h1>Scrapping Tool</h1>
+      <p class="hint" style="margin-bottom:12px">Google Maps — <b>Places API (New)</b> + Maps JS</p>
+
+      <!-- Tarjeta de estado -->
+      <div class="pill" id="statusPill"><span class="dot"></span><span id="statusText">“Keyword in Ubicación”</span></div>
+      <p style="margin:10px 0 6px; font-weight:700">Progress <span id="comboProgress">(0/0)</span></p>
+      <div class="progress" aria-label="progreso combinaciones"><div id="comboBar"></div></div>
+
+      <label style="margin-top:14px">API Key</label>
+      <input id="apiKey" placeholder="pegar aqui la Key"/>
+
+      <label id="kwLabel">Keywords (0)</label>
+      <textarea id="keywords">Restaurante</textarea>
+
+      <label id="locLabel">Ubicaciones (0)</label>
+      <textarea id="locations">Hermosillo - Sonora
+Nogales - Sonora</textarea>
+
+      <label>Segundos Max para Extraer Correo</label>
+      <input id="emailTimeout" value="10" />
+      <p class="hint">El email no lo entrega Google; se intenta detectar en la web del negocio (puede fallar por CORS).</p>
+
+      <p class="hint">Origen: <span id="origin"></span></p>
+    </aside>
+
+    <main>
+      <!-- Toolbar superior -->
+      <div class="toolbar">
+        <div style="display:flex; align-items:center; gap:10px; min-width:260px">
+          <div class="badge"><span id="count">0</span></div>
+          <div>
+            <div style="font-weight:700; font-size:12px; opacity:.85">RESULTADOS ENCONTRADOS</div>
+            <div class="progress" aria-label="progreso resultados"><div id="bar"></div></div>
+          </div>
+        </div>
+
+        <button class="btn" id="clear">Limpiar Datos</button>
+
+        <label class="checkpill"><input type="checkbox" id="includeLatLng" checked /> Extract Lat & Long</label>
+        <label class="checkpill"><input type="checkbox" id="extractEmail" /> Extract Email</label>
+
+        <button class="btn" id="export">Descargar</button>
+
+        <input class="searchbox" id="globalSearch" placeholder="Search..." />
+        <button class="btn primary" id="start">Start Extracting</button>
+      </div>
+
+      <!-- Resultados -->
+      <div class="panel">
+        <div id="log"></div>
+        <div style="height:12px"></div>
+        <div style="overflow:auto; max-height:62vh; border:1px solid var(--border); border-radius:10px">
+          <table id="table">
+            <thead id="thead"></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+  "use strict";
+
+  // ===== UTILIDAD =====
+  const $ = (s, r=document)=>r.querySelector(s);
+  const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
+  $("#origin").textContent = location.origin;
+
+  const headersWantedBase = [
+    "KW","Location","Company Name","Category","Website","Phone","email","address",
+    "Postal Code + City","state","pin code","# Reviews","Review","CID","MapLink"
+  ];
+  let rows = [];
+  let includeLatLng = true;
+  let includeEmail = false;
+
+  function toStr(v){ return v==null ? "" : String(v); }
+  function escCSV(v){ return '"' + toStr(v).replace(/"/g,'""') + '"'; }
+  function downloadCSV(name, data){
+    if(!data.length){ alert("No hay filas."); return; }
+    const cols = Object.keys(data[0]);
+    const lines = [cols.map(escCSV).join(",")];
+    for(const r of data) lines.push(cols.map(h=>escCSV(r[h])).join(","));
+    const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8;"});
+    const url = URL.createObjectURL(blob); const a=document.createElement("a");
+    a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+  function log(m){ const el=$("#log"); el.textContent = (el.textContent?el.textContent+"\n":"")+m; console.log("[ScrappingTool]",m); }
+  function setProgress(p){ $("#bar").style.width = Math.max(0,Math.min(100,p)) + "%"; }
+  function setComboProgress(p){ $("#comboBar").style.width = Math.max(0,Math.min(100,p)) + "%"; }
+
+  // Contadores dinámicos en labels
+  function updateCounters(){
+    const k = $("#keywords").value.split("\n").map(s=>s.trim()).filter(Boolean).length;
+    const l = $("#locations").value.split("\n").map(s=>s.trim()).filter(Boolean).length;
+    $("#kwLabel").textContent = `Keywords (${k})`;
+    $("#locLabel").textContent = `Ubicaciones (${l})`;
+  }
+  $("#keywords").addEventListener("input", updateCounters);
+  $("#locations").addEventListener("input", updateCounters);
+  updateCounters();
+
+  // Tabla
+  function currentHeaders(){
+    const h = [...headersWantedBase];
+    // (Lat/Lng/email ya están en base; mantenemos compatibilidad con tus hojas)
+    if (!includeEmail) { const i=h.indexOf("email"); if (i>-1) h.splice(i,1); }
+    if (!includeLatLng) { const i=h.indexOf("pin code"); /* dejamos postal/pincode; lat/lng no están en base */ }
+    return h;
+  }
+  function renderHeader(){
+    const thead=$("#thead"); thead.innerHTML="";
+    const tr1=document.createElement("tr"), tr2=document.createElement("tr");
+    currentHeaders().forEach(h=>{
+      const th=document.createElement("th"); th.textContent=h; tr1.appendChild(th);
+      const th2=document.createElement("th");
+      const inp=document.createElement("input"); inp.placeholder="filtrar…"; inp.dataset.col=h; inp.addEventListener("input",renderBody);
+      th2.appendChild(inp); tr2.appendChild(th2);
+    });
+    thead.appendChild(tr1); thead.appendChild(tr2);
+  }
+  function renderBody(){
+    const tbody=$("#tbody"); tbody.innerHTML="";
+    const filters={}; $$("#thead input").forEach(i=>{ const v=i.value.trim().toLowerCase(); if(v) filters[i.dataset.col]=v; });
+    const cols = currentHeaders();
+    const data = rows.map(r=>{
+      const pruned={}; cols.forEach(c=>pruned[c]=r[c]??""); return pruned;
+    }).filter(r=>{
+      for(const k in filters){ if(!toStr(r[k]).toLowerCase().includes(filters[k])) return false; } return true;
+    });
+    for(const r of data){
+      const tr=document.createElement("tr");
+      cols.forEach(h=>{ const td=document.createElement("td"); td.textContent=toStr(r[h]??""); tr.appendChild(td); });
+      tbody.appendChild(tr);
+    }
+    $("#count").textContent = data.length;
+  }
+
+  $("#clear").addEventListener("click",()=>{ rows=[]; $("#log").textContent=""; $("#count").textContent="0"; setProgress(0); setComboProgress(0); renderBody(); });
+  $("#export").addEventListener("click",()=> downloadCSV("scrapping-tool.csv", rows));
+  $("#globalSearch").addEventListener("input", e=>{
+    const term=e.target.value.trim().toLowerCase(); $$("#thead input").forEach(i=>i.value="");
+    const tbody=$("#tbody"); tbody.innerHTML="";
+    const cols = currentHeaders();
+    const data = term? rows.filter(r=>Object.values(r).some(v=>toStr(v).toLowerCase().includes(term))) : rows;
+    for(const r of data){
+      const tr=document.createElement("tr");
+      cols.forEach(h=>{ const td=document.createElement("td"); td.textContent=toStr(r[h]??""); tr.appendChild(td); });
+      tbody.appendChild(tr);
+    }
+    $("#count").textContent=data.length;
+  });
+
+  $("#includeLatLng").addEventListener("change", e=>{ includeLatLng=e.target.checked; renderHeader(); renderBody(); });
+  $("#extractEmail").addEventListener("change", e=>{ includeEmail=e.target.checked; renderHeader(); renderBody(); });
+
+  renderHeader(); renderBody();
+
+  // ===== EXTRACCIÓN (lote: keywords x ubicaciones) =====
+  $("#start").addEventListener("click", start);
+
+  async function start(){
+    const key=$("#apiKey").value.trim(); if(!key) return alert("Coloca tu API key.");
+    // Cargar Maps JS si no está
+    if(!window.google || !google.maps || !google.maps.importLibrary){
+      const s=document.createElement("script");
+      s.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(key)+"&v=quarterly";
+      s.async=true; s.defer=true; s.onerror=()=>log("No se pudo cargar Google Maps JS API.");
+      document.body.appendChild(s);
+      await new Promise(res=> s.onload=res);
+    }
+
+    const keywords = $("#keywords").value.split("\n").map(t=>t.trim()).filter(Boolean);
+    const locations = $("#locations").value.split("\n").map(t=>t.trim()).filter(Boolean);
+    if (!keywords.length || !locations.length) return alert("Agrega al menos 1 keyword y 1 ubicación.");
+
+    const emailTimeout = Math.max(1, Math.min(20, parseInt($("#emailTimeout").value,10) || 10));
+    const language="es";
+
+    rows=[]; renderBody(); setProgress(0); setComboProgress(0);
+    const totalCombos = keywords.length * locations.length;
+    $("#comboProgress").textContent = `(0/${totalCombos})`;
+
+    const { Map } = await google.maps.importLibrary("maps");
+    const { Place } = await google.maps.importLibrary("places");
+    const geocoder = new google.maps.Geocoder();
+
+    let comboIndex = 0;
+    for (const kw of keywords){
+      for (const loc of locations){
+        comboIndex++;
+        $("#statusText").textContent = `"${kw} in ${loc}"`;
+        $("#comboProgress").textContent = `(${comboIndex}/${totalCombos})`;
+        setComboProgress( Math.round((comboIndex-1)/totalCombos*100) );
+
+        const center = await geocodeAddress(geocoder, loc);
+        if (!center){ log(`No se pudo geocodificar: ${loc}`); continue; }
+
+        const dummy=document.createElement("div"); dummy.style.width="0"; dummy.style.height="0"; document.body.appendChild(dummy);
+        const map=new Map(dummy,{center,zoom:12});
+
+        const req = {
+          textQuery: kw,
+          fields: [
+            "id","displayName","formattedAddress","location","types","primaryType",
+            "websiteUri","nationalPhoneNumber","internationalPhoneNumber",
+            "rating","userRatingCount","googleMapsUri","addressComponents"
+          ],
+          locationBias: map.getCenter(),
+          maxResultCount: 50,
+          language, region:"mx"
+        };
+
+        try{
+          const { places } = await Place.searchByText(req);
+          const total = places?.length || 0;
+          log(`(${comboIndex}/${totalCombos}) ${kw} @ ${loc}: ${total} resultados`);
+
+          let i=0;
+          for (const p of places){
+            i++;
+
+            // Address components -> city/state/postal
+            let city="", state="", postal="";
+            if(Array.isArray(p.addressComponents)){
+              for(const c of p.addressComponents){
+                const t=c.types||[];
+                const longTxt=c.longText||c.long_name||c.name||"";
+                if(t.includes("locality")||t.includes("sublocality")||t.includes("postal_town")) city=city||longTxt;
+                if(t.includes("administrative_area_level_1")) state=state||longTxt;
+                if(t.includes("postal_code")) postal=postal||longTxt;
+              }
+            }
+            const phone = p.nationalPhoneNumber || p.internationalPhoneNumber || "";
+            const cid = extractCID(p.googleMapsUri||"");
+
+            // Email best-effort (si se activó)
+            let email="";
+            if (includeEmail && p.websiteUri){
+              try { email = await tryExtractEmail(p.websiteUri, emailTimeout*1000); } catch(_) { email=""; }
+            }
+
+            const row = {
+              "KW": kw,
+              "Location": loc,
+              "Company Name": p.displayName || "",
+              "Category": p.primaryType || (p.types ? p.types.join("|") : ""),
+              "Website": p.websiteUri || "",
+              "Phone": phone,
+              "email": email,
+              "address": p.formattedAddress || "",
+              "Postal Code + City": (postal?postal+" ":"") + (city||""),
+              "state": state || "",
+              "pin code": postal || "",
+              "# Reviews": p.userRatingCount ?? "",
+              "Review": p.rating ?? "",
+              "CID": cid,
+              "MapLink": p.googleMapsUri || ""
+            };
+            rows.push(row);
+
+            if (i % 5 === 0) renderBody();
+            setProgress( Math.min(100, Math.round((i/Math.max(1,total))*100)) );
+          }
+          renderBody();
+        }catch(e){
+          log(`Error en "${kw}" @ "${loc}": ${e && e.message ? e.message : e}`);
+        }
+      }
+    }
+    setComboProgress(100);
+    log("Proceso finalizado.");
+  }
+
+  async function geocodeAddress(geocoder, address){
+    try{
+      const { results } = await geocoder.geocode({ address });
+      if (results && results[0]){
+        const { lat, lng } = results[0].geometry.location;
+        return { lat: lat(), lng: lng() };
+      }
+      return null;
+    }catch{ return null; }
+  }
+
+  async function tryExtractEmail(url, timeoutMs){
+    const ctrl = new AbortController();
+    const to = setTimeout(()=>ctrl.abort(), timeoutMs);
+    try{
+      const res = await fetch(url, { mode:"cors", signal: ctrl.signal });
+      const text = await res.text();
+      const m = text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
+      return m ? m[0] : "";
+    }catch{ return ""; } finally { clearTimeout(to); }
+  }
+
+  function extractCID(url){
+    try{
+      if(!url) return "";
+      const u = new URL(url);
+      const cid = u.searchParams.get("cid");
+      if(cid) return cid;
+      const m = url.match(/[?&]cid=(\d+)/);
+      return m? m[1] : "";
+    }catch{ return ""; }
+  }
+  </script>
+</body>
+</html>
