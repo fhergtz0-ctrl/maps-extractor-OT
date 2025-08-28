@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "Scrapping Tool",
+  "version": "0.1.0",
+  "description": "UI + content script para colectar datos de resultados de Google (demo).",
+  "action": {
+    "default_title": "Scrapping Tool"
+  },
+  "background": {
+    "service_worker": "controllers/background.js"
+  },
+  "permissions": [
+    "storage",
+    "tabs",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "https://www.google.com/*",
+    "https://*.google.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.google.com/*",
+        "https://*.google.com/*"
+      ],
+      "js": [
+        "controllers/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "views/*",
+        "controllers/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}
