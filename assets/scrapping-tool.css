@@ -1,7 +1,7 @@
 /* assets/css/scrapping-tool.css
- * Estilos completos para la versión web (Vercel) de "Scrapping Tool".
- * Incluye layout (sidebar + main), botones, inputs, tabla con encabezados tipo hoja
- * y el fondo con patrón (Patrones_2.png).
+ * Estilos para la versión web (Vercel) de "Scrapping Tool".
+ * Layout (sidebar + main), botones, inputs, tabla con encabezados,
+ * y fondo con patrón en /assets/img/Patrones_2.png
  */
 
 :root{
@@ -24,13 +24,11 @@ body{
   position:relative;
 }
 
-/* Fondo con patrón (ajusta la ruta a tu estructura de proyecto) */
+/* Fondo con patrón */
 body::before{
   content:"";
   position:fixed; inset:0; z-index:-1; pointer-events:none;
-  /* Si pones la imagen en /public/assets/img/Patrones_2.png en Vercel: */
   background-image:url("/assets/img/Patrones_2.png");
-  /* Si la dejas junto a index.html, usa: url("./Patrones_2.png") */
   background-repeat:repeat;
   background-position:center;
   background-size:340px auto;
