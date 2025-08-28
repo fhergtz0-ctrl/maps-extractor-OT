@@ -1,0 +1,92 @@
+/* assets/css/scrapping-tool.css
+ * Estilos completos para la versión web (Vercel) de "Scrapping Tool".
+ * Incluye layout (sidebar + main), botones, inputs, tabla con encabezados tipo hoja
+ * y el fondo con patrón (Patrones_2.png).
+ */
+
+:root{
+  color-scheme: light dark;
+  --card:#121212;
+  --muted:#1e1e1e;
+  --text:#e5e5e5;
+  --border:#2d2d2d;
+  --primary:#22c55e;
+}
+
+/* Reset mínimo */
+*{ box-sizing: border-box; }
+html, body{ height: 100%; }
+body{
+  margin:0;
+  font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  background:#0b0b0c;
+  color:var(--text);
+  position:relative;
+}
+
+/* Fondo con patrón (ajusta la ruta a tu estructura de proyecto) */
+body::before{
+  content:"";
+  position:fixed; inset:0; z-index:-1; pointer-events:none;
+  /* Si pones la imagen en /public/assets/img/Patrones_2.png en Vercel: */
+  background-image:url("/assets/img/Patrones_2.png");
+  /* Si la dejas junto a index.html, usa: url("./Patrones_2.png") */
+  background-repeat:repeat;
+  background-position:center;
+  background-size:340px auto;
+  opacity:.12;
+}
+
+.app{ min-height:100vh; display:grid; grid-template-columns:320px 1fr; gap:16px; padding:16px; }
+aside{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; position:sticky; top:16px; height:fit-content; }
+main{ display:flex; flex-direction:column; gap:12px; }
+h1{ margin:0 0 8px; }
+
+label{ display:block; margin:10px 0 6px; font-weight:600; }
+input,textarea,select{
+  width:100%;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--muted);
+  color:var(--text);
+}
+textarea{ min-height:100px; resize:vertical; }
+.row{ display:flex; gap:8px; }
+.pill{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:12px; border:1px solid var(--border); background:var(--muted); font-size:14px; }
+.dot{ width:10px; height:10px; border-radius:50%; background:#22c55e; }
+.hint{ color:#9aa0a6; font-size:12px; }
+
+.progress{ height:10px; background:var(--muted); border:1px solid var(--border); border-radius:999px; overflow:hidden; }
+.progress>div{ height:100%; width:0%; background:var(--primary); }
+
+.toolbar{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:14px;
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px;
+}
+.badge{ background:#111827; color:#e5e7eb; border:1px solid var(--border); padding:10px 14px; border-radius:12px; font-weight:800; font-size:18px; }
+.btn{ padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--muted); cursor:pointer; font-weight:600; }
+.btn.primary{ background:var(--primary); color:#041e10; border-color:transparent; }
+.btn:disabled{ opacity:.6; cursor:not-allowed; }
+
+.checkpill{ display:inline-flex; align-items:center; gap:8px; border:1px solid var(--border); padding:8px 12px; border-radius:10px; background:var(--muted); font-size:14px; }
+.searchbox{ flex:1; min-width:220px; }
+
+.panel{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px; }
+#log{ white-space:pre-wrap; font-size:12px; background:var(--muted); padding:10px; border-radius:10px; min-height:56px; }
+
+table{ width:100%; border-collapse:collapse; }
+thead th{ position:sticky; top:0; background:var(--card); z-index:1; }
+th,td{ border-bottom:1px solid var(--border); padding:8px 10px; text-align:left; font-size:13px; vertical-align:top; }
+thead input{
+  width:100%; padding:6px 8px; font-size:12px; margin-top:4px;
+  border-radius:8px; border:1px solid var(--border); background:var(--muted); color:var(--text);
+}
+
+/* Responsivo */
+@media (max-width: 980px){
+  .app{ grid-template-columns: 1fr; }
+  aside{ position: static; }
+}
