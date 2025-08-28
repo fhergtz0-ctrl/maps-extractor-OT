@@ -2,124 +2,86 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>Extractor de Restaurantes — UI Pro (Places API New)</title>
+  <title>Extractor de Restaurantes — Encabezados estilo hoja</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root { color-scheme: light dark; --card:#fff; --muted:#f3f3f3; --text:#111; --border:#e5e7eb; --primary:#22c55e; --danger:#ef4444; }
-    @media (prefers-color-scheme: dark) {
-      :root { --card:#121212; --muted:#1e1e1e; --text:#e5e5e5; --border:#2d2d2d; }
-    }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:var(--text); background: #0b0b0c; }
-    .app { min-height:100vh; display:grid; grid-template-columns: 320px 1fr; gap:16px; padding:16px; background: linear-gradient(180deg,#0b0b0c 0%, #111 100%); }
-    aside { background: var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; position:sticky; top:16px; height:fit-content; box-shadow: 0 10px 18px rgba(0,0,0,.08); }
-    .brand { font-size:22px; font-weight:800; margin:0 0 8px; letter-spacing:.2px; }
-    .sub { margin:0 0 14px; color:#8b8b8b; font-size:12px; }
-    label { display:block; font-weight:600; margin:12px 0 6px; }
-    input, textarea, select { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:var(--muted); color:var(--text); outline:none; }
-    textarea { min-height:72px; resize:vertical; }
-    .row { display:flex; gap:8px; }
-    .hint { color:#9aa0a6; font-size:12px; margin-top:6px; }
-    .switch { display:flex; align-items:center; gap:8px; margin-top:8px; }
-    .switch input { width:auto; }
-    main { display:flex; flex-direction:column; gap:12px; }
-    .toolbar { background:var(--card); border:1px solid var(--border); border-radius:14px; display:flex; align-items:center; gap:12px; padding:12px; flex-wrap:wrap; box-shadow: 0 10px 18px rgba(0,0,0,.08); }
-    .stat { flex:1; display:flex; align-items:center; gap:12px; }
-    .badge { background:#111827; color:#e5e7eb; border:1px solid var(--border); padding:10px 14px; border-radius:12px; font-weight:700; font-size:18px; }
-    .btn { padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--muted); cursor:pointer; font-weight:600; }
-    .btn.primary { background:var(--primary); color:#04210f; border-color:transparent; }
-    .btn.danger { background:#181818; color:#fca5a5; border-color:#3f3f3f; }
-    .btn:disabled { opacity:.6; cursor:not-allowed; }
-    .searchbox { flex:1; min-width:220px; }
-    .panel { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px; box-shadow: 0 10px 18px rgba(0,0,0,.08); }
-    #log { white-space:pre-wrap; font-size:12px; background:var(--muted); padding:10px; border-radius:10px; min-height:64px; }
-    table { width:100%; border-collapse:collapse; }
-    thead th { position:sticky; top:0; background:var(--card); z-index:1; }
-    th, td { border-bottom:1px solid var(--border); padding:10px; text-align:left; font-size:14px; vertical-align:top; }
-    thead input { width:100%; padding:8px; font-size:12px; margin-top:4px; border-radius:8px; border:1px solid var(--border); background:var(--muted); color:var(--text); }
-    .progress { height:8px; background:var(--muted); border-radius:999px; overflow:hidden; }
-    .progress > div { height:100%; width:0%; background:var(--primary); }
-    .pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--border); background:var(--muted); font-size:12px; }
-    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    .footer-note { font-size:11px; color:#9aa0a6; }
+    :root { color-scheme: light dark; --card:#121212; --muted:#1e1e1e; --text:#e5e5e5; --border:#2d2d2d; --primary:#22c55e; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0b0b0c;color:var(--text)}
+    .app{min-height:100vh;display:grid;grid-template-columns:320px 1fr;gap:16px;padding:16px}
+    aside{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;position:sticky;top:16px;height:fit-content}
+    main{display:flex;flex-direction:column;gap:12px}
+    h1{margin:0 0 8px}
+    label{display:block;margin:10px 0 6px;font-weight:600}
+    input,textarea,select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--muted);color:var(--text)}
+    textarea{min-height:60px}
+    .row{display:flex;gap:8px}
+    .toolbar{background:var(--card);border:1px solid var(--border);border-radius:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px}
+    .btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--muted);cursor:pointer;font-weight:600}
+    .btn.primary{background:var(--primary);color:#041e10;border-color:transparent}
+    .searchbox{flex:1;min-width:220px}
+    .panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px}
+    #log{white-space:pre-wrap;font-size:12px;background:var(--muted);padding:10px;border-radius:10px;min-height:56px}
+    .progress{height:8px;background:var(--muted);border-radius:999px;overflow:hidden}
+    .progress>div{height:100%;width:0%;background:var(--primary)}
+    table{width:100%;border-collapse:collapse}
+    thead th{position:sticky;top:0;background:var(--card);z-index:1}
+    th,td{border-bottom:1px solid var(--border);padding:8px 10px;text-align:left;font-size:13px;vertical-align:top}
+    thead input{width:100%;padding:6px 8px;font-size:12px;margin-top:4px;border-radius:8px;border:1px solid var(--border);background:var(--muted);color:var(--text)}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--border);background:var(--muted);font-size:12px}
   </style>
 </head>
 <body>
   <div class="app">
     <aside>
-      <h1 class="brand">Extractor de Restaurantes</h1>
-      <p class="sub">Google Maps Platform — <strong>Places API (New)</strong> + <strong>Maps JS</strong></p>
+      <h1>Extractor de Restaurantes</h1>
+      <p style="margin:0 0 12px;color:#9aa0a6">Google Maps — <b>Places API (New)</b> + Maps JS</p>
 
       <label>API Key</label>
-      <input id="apiKey" placeholder="AIza... (tu key)" />
+      <input id="apiKey" placeholder="AIza... (tu key)"/>
 
       <label>Keyword</label>
       <textarea id="keywords">restaurantes</textarea>
 
       <label>Centro (lat, lng)</label>
       <div class="row">
-        <input id="lat" value="23.2167" />
-        <input id="lng" value="-106.4167" />
+        <input id="lat" value="23.2167"/>
+        <input id="lng" value="-106.4167"/>
       </div>
-      <div class="grid2">
-        <div>
+
+      <div class="row">
+        <div style="flex:1">
           <label>Radio (m)</label>
-          <input id="radius" value="5000" />
+          <input id="radius" value="5000"/>
         </div>
-        <div>
+        <div style="flex:1">
           <label>Idioma</label>
-          <select id="lang">
-            <option value="es" selected>es</option>
-            <option value="en">en</option>
-          </select>
+          <select id="lang"><option value="es" selected>es</option><option value="en">en</option></select>
         </div>
       </div>
 
-      <div class="switch">
-        <input type="checkbox" id="includeLatLng" checked />
-        <label for="includeLatLng">Extract Lat & Long</label>
-      </div>
-      <div class="switch">
-        <input type="checkbox" id="extractEmail" />
-        <label for="extractEmail">Extract Email (beta)</label>
-      </div>
-      <div class="grid2">
-        <div>
-          <label>Timeout Email (s)</label>
-          <input id="emailTimeout" value="10" />
-        </div>
-        <div>
-          <label>Máx. Resultados</label>
-          <input id="maxResults" value="40" />
-        </div>
-      </div>
-
-      <p class="hint">Origen detectado: <span id="origin" class="pill"></span></p>
-      <div class="footer-note">Google no expone email. El intento “beta” depende de CORS del sitio.</div>
+      <p style="color:#9aa0a6;font-size:12px">Origen: <span id="origin" class="pill"></span></p>
     </aside>
 
     <main>
-      <!-- Toolbar -->
       <div class="toolbar">
-        <div class="stat">
-          <span class="badge"><span id="count">0</span></span>
+        <div style="display:flex;align-items:center;gap:10px;min-width:220px">
+          <div style="font-weight:800;font-size:18px"><span id="count">0</span></div>
           <div>
-            <div style="font-weight:700; font-size:13px;">RESULTADOS ENCONTRADOS</div>
-            <div class="progress" aria-label="progreso"><div id="bar"></div></div>
+            <div style="font-weight:700;font-size:12px;opacity:.8">RESULTADOS ENCONTRADOS</div>
+            <div class="progress"><div id="bar"></div></div>
           </div>
         </div>
-
-        <button class="btn danger" id="clear">Limpiar Datos</button>
+        <button class="btn" id="clear">Limpiar Datos</button>
         <button class="btn" id="export">Descargar</button>
-        <input class="searchbox" id="globalSearch" placeholder="Buscar en la tabla…" />
+        <input class="searchbox" id="globalSearch" placeholder="Buscar en la tabla…"/>
         <button class="btn primary" id="start">Start Extracting</button>
       </div>
 
-      <!-- Results table -->
       <div class="panel">
         <div id="log"></div>
-        <div style="height:14px"></div>
-        <div style="overflow:auto; max-height:60vh; border:1px solid var(--border); border-radius:10px;">
+        <div style="height:12px"></div>
+        <div style="overflow:auto;max-height:62vh;border:1px solid var(--border);border-radius:10px">
           <table id="table">
             <thead id="thead"></thead>
             <tbody id="tbody"></tbody>
@@ -132,166 +94,99 @@
   <script>
   "use strict";
 
-  // ======= UTILIDADES =======
-  const $ = (sel, root=document) => root.querySelector(sel);
-  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-  const originSpan = $("#origin"); originSpan.textContent = location.origin;
-
-  function toStr(v){ return v == null ? "" : String(v); }
-  function escCSV(v){ return '"' + toStr(v).replace(/"/g,'""') + '"'; }
-  function downloadCSV(filename, rows){
-    if (!rows.length) return alert("No hay filas.");
-    const headers = Object.keys(rows[0]);
-    const lines = [headers.map(escCSV).join(",")];
-    for (const r of rows) lines.push(headers.map(h => escCSV(r[h])).join(","));
-    const blob = new Blob([lines.join("\n")], { type:"text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-  }
-  function log(msg){
-    const el = $("#log");
-    el.textContent = (el.textContent ? el.textContent + "\n" : "") + msg;
-    console.log("[Extractor]", msg);
-  }
-  function setProgress(pct){ $("#bar").style.width = Math.max(0, Math.min(100, pct)) + "%"; }
-
-  // ======= ESTADO =======
-  let rows = [];
-  let tableColumns = [
-    "Keyword","Location","Company name","Category","Website","Country Code","Phone",
-    "Address","City","State","Rating","Rating count","Maplink"
+  // ===== UTIL =====
+  const $ = (s, r=document)=>r.querySelector(s);
+  const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
+  $("#origin").textContent = location.origin;
+  const headersWanted = [
+    "KW","Location","Company Name","Category","Website","Phone","email","address",
+    "Postal Code + City","state","pin code","# Reviews","Review","CID","MapLink"
   ];
-  let includeLatLng = true;
-  let includeEmail = false;
+  let rows = [];
 
-  // ======= TABLA =======
-  function renderTableHeader(){
-    const head = $("#thead"); head.innerHTML = "";
-    const cols = [...tableColumns];
-    if (includeLatLng && !cols.includes("Lat")) cols.splice(5,0,"Lat","Lng");
-    if (includeEmail && !cols.includes("Email")) cols.splice(5,0,"Email");
-    const tr1 = document.createElement("tr");
-    const tr2 = document.createElement("tr");
-    for (const c of cols){
-      const th = document.createElement("th"); th.textContent = c; tr1.appendChild(th);
-      const th2 = document.createElement("th");
-      const inp = document.createElement("input"); inp.placeholder = "filtrar…";
-      inp.dataset.col = c;
-      inp.addEventListener("input", applyFilters);
-      th2.appendChild(inp);
-      tr2.appendChild(th2);
-    }
-    head.appendChild(tr1); head.appendChild(tr2);
+  function toStr(v){ return v==null ? "" : String(v); }
+  function escCSV(v){ return '"' + toStr(v).replace(/"/g,'""') + '"'; }
+  function downloadCSV(name, data){
+    if(!data.length){ alert("No hay filas."); return; }
+    const cols = Object.keys(data[0]);
+    const lines = [cols.map(escCSV).join(",")];
+    for(const r of data) lines.push(cols.map(h=>escCSV(r[h])).join(","));
+    const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8;"});
+    const url = URL.createObjectURL(blob); const a=document.createElement("a");
+    a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   }
-  function renderTableBody(){
-    const body = $("#tbody"); body.innerHTML = "";
-    const filters = {};
-    $$("#thead input").forEach(i => { const v=i.value.trim().toLowerCase(); if (v) filters[i.dataset.col]=v; });
-
-    const cols = Array.from($$("#thead tr:first-child th")).map(th=>th.textContent);
-    const filtered = rows.filter(r=>{
-      for (const k in filters){
-        const val = toStr(r[k] ?? "").toLowerCase();
-        if (!val.includes(filters[k])) return false;
-      }
-      return true;
+  function log(m){ const el=$("#log"); el.textContent = (el.textContent?el.textContent+"\n":"")+m; console.log("[Extractor]",m); }
+  function setProgress(p){ $("#bar").style.width = Math.max(0,Math.min(100,p)) + "%"; }
+  function renderHeader(){
+    const thead=$("#thead"); thead.innerHTML="";
+    const tr1=document.createElement("tr"); const tr2=document.createElement("tr");
+    headersWanted.forEach(h=>{
+      const th=document.createElement("th"); th.textContent=h; tr1.appendChild(th);
+      const th2=document.createElement("th");
+      const inp=document.createElement("input"); inp.placeholder="filtrar…"; inp.dataset.col=h; inp.addEventListener("input",renderBody);
+      th2.appendChild(inp); tr2.appendChild(th2);
     });
-
-    for (const r of filtered){
-      const tr = document.createElement("tr");
-      for (const c of cols){
-        const td = document.createElement("td");
-        td.textContent = toStr(r[c] ?? "");
-        tr.appendChild(td);
-      }
-      body.appendChild(tr);
-    }
-    $("#count").textContent = filtered.length;
+    thead.appendChild(tr1); thead.appendChild(tr2);
   }
-  function applyFilters(){ renderTableBody(); }
+  function renderBody(){
+    const tbody=$("#tbody"); tbody.innerHTML="";
+    const filters={}; $$("#thead input").forEach(i=>{ const v=i.value.trim().toLowerCase(); if(v) filters[i.dataset.col]=v; });
+    const data = rows.filter(r=>{
+      for(const k in filters){ if(!toStr(r[k]).toLowerCase().includes(filters[k])) return false; } return true;
+    });
+    for(const r of data){
+      const tr=document.createElement("tr");
+      headersWanted.forEach(h=>{ const td=document.createElement("td"); td.textContent=toStr(r[h]??""); tr.appendChild(td); });
+      tbody.appendChild(tr);
+    }
+    $("#count").textContent = data.length;
+  }
 
-  // Búsqueda global
+  $("#clear").addEventListener("click",()=>{ rows=[]; $("#log").textContent=""; $("#count").textContent="0"; setProgress(0); renderBody(); });
+  $("#export").addEventListener("click",()=> downloadCSV("restaurantes.csv", rows));
   $("#globalSearch").addEventListener("input", e=>{
-    const term = e.target.value.trim().toLowerCase();
-    $$("#thead input").forEach(i=> i.value = "");
-    if (!term){ renderTableBody(); return; }
-    const body = $("#tbody"); body.innerHTML = "";
-    const cols = Array.from($$("#thead tr:first-child th")).map(th=>th.textContent);
-    const filtered = rows.filter(r => Object.values(r).some(v => toStr(v).toLowerCase().includes(term)));
-    for (const r of filtered){
-      const tr = document.createElement("tr");
-      for (const c of cols){
-        const td = document.createElement("td");
-        td.textContent = toStr(r[c] ?? "");
-        tr.appendChild(td);
-      }
-      body.appendChild(tr);
+    const term=e.target.value.trim().toLowerCase(); $$("#thead input").forEach(i=>i.value="");
+    const tbody=$("#tbody"); tbody.innerHTML="";
+    const data = term? rows.filter(r=>Object.values(r).some(v=>toStr(v).toLowerCase().includes(term))) : rows;
+    for(const r of data){
+      const tr=document.createElement("tr");
+      headersWanted.forEach(h=>{ const td=document.createElement("td"); td.textContent=toStr(r[h]??""); tr.appendChild(td); });
+      tbody.appendChild(tr);
     }
-    $("#count").textContent = filtered.length;
+    $("#count").textContent=data.length;
   });
 
-  // ======= EVENTOS UI =======
-  $("#clear").addEventListener("click", ()=>{
-    rows = [];
-    setProgress(0);
-    $("#count").textContent = "0";
-    $("#log").textContent = "";
-    renderTableBody();
-  });
-  $("#export").addEventListener("click", ()=> downloadCSV("restaurantes.csv", rows));
+  renderHeader(); renderBody();
 
-  $("#includeLatLng").addEventListener("change", e=>{ includeLatLng = e.target.checked; renderTableHeader(); renderTableBody(); });
-  $("#extractEmail").addEventListener("change", e=>{ includeEmail = e.target.checked; renderTableHeader(); renderTableBody(); });
+  // ===== EXTRACCIÓN =====
+  $("#start").addEventListener("click", start);
 
-  // ======= GOOGLE MAPS (Places New) =======
-  $("#start").addEventListener("click", async ()=>{
-    const key = $("#apiKey").value.trim();
-    if (!key) return alert("Coloca tu API key.");
-
-    // Carga Maps JS si no está
-    if (!window.google || !google.maps || !google.maps.importLibrary){
-      const s = document.createElement("script");
-      s.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(key) + "&v=quarterly";
-      s.async = true; s.defer = true;
-      s.onerror = ()=> log("No se pudo cargar Google Maps JS API. Revisa key, restricciones y que Places API (New) esté habilitada.");
+  async function start(){
+    const key=$("#apiKey").value.trim(); if(!key) return alert("Coloca tu API key.");
+    // Cargar Maps JS si no está
+    if(!window.google || !google.maps || !google.maps.importLibrary){
+      const s=document.createElement("script");
+      s.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(key)+"&v=quarterly";
+      s.async=true; s.defer=true; s.onerror=()=>log("No se pudo cargar Google Maps JS API.");
       document.body.appendChild(s);
-      await new Promise(res=> s.onload = res);
+      await new Promise(res=> s.onload=res);
     }
 
-    // Reinicia estado UI
-    $("#log").textContent = `Origen: ${location.origin}\nCargando librerías…`;
+    const kw = ($("#keywords").value||"").split("\n").map(t=>t.trim()).filter(Boolean)[0] || "restaurantes";
+    const lat=parseFloat($("#lat").value), lng=parseFloat($("#lng").value);
+    const radius=parseInt($("#radius").value,10)||3000;
+    const language=$("#lang").value||"es";
+
+    log(`Inicializando búsqueda… "${kw}"`);
     setProgress(5);
+
     const { Map } = await google.maps.importLibrary("maps");
     const { Place } = await google.maps.importLibrary("places");
-    $("#log").textContent += `\nMaps JS cargado ✓`;
+    const center = (Number.isFinite(lat)&&Number.isFinite(lng))? {lat,lng} : {lat:23.2167,lng:-106.4167};
+    const dummy=document.createElement("div"); dummy.style.width="0"; dummy.style.height="0"; document.body.appendChild(dummy);
+    const map=new Map(dummy,{center,zoom:12});
 
-    const keywordLines = $("#keywords").value.split("\n").map(s=>s.trim()).filter(Boolean);
-    const kw = keywordLines.length ? keywordLines[0] : "restaurantes";
-    const lat = parseFloat($("#lat").value);
-    const lng = parseFloat($("#lng").value);
-    const radius = parseInt($("#radius").value,10) || 3000;
-    const language = $("#lang").value || "es";
-    const maxResults = Math.max(1, Math.min(80, parseInt($("#maxResults").value,10) || 40));
-    const emailTimeout = Math.max(1, Math.min(20, parseInt($("#emailTimeout").value,10) || 10));
-
-    const center = (Number.isFinite(lat) && Number.isFinite(lng)) ? {lat,lng} : {lat:23.2167, lng:-106.4167};
-    const dummy = document.createElement("div"); dummy.style.width="0"; dummy.style.height="0"; document.body.appendChild(dummy);
-    const map = new Map(dummy, { center, zoom: 12 });
-
-    // Cabeceras de tabla según toggles
-    tableColumns = [
-      "Keyword","Location","Company name","Category","Website","Country Code","Phone",
-      "Address","City","State","Rating","Rating count","Maplink"
-    ];
-    if (includeEmail) tableColumns.splice(5,0,"Email");
-    if (includeLatLng) tableColumns.splice(5,0,"Lat","Lng");
-    renderTableHeader();
-
-    rows = [];
-    renderTableBody();
-
-    const request = {
+    const req = {
       textQuery: kw,
       fields: [
         "id","displayName","formattedAddress","location","types","primaryType",
@@ -299,85 +194,81 @@
         "rating","userRatingCount","googleMapsUri","addressComponents"
       ],
       locationBias: map.getCenter(),
-      maxResultCount: maxResults,
-      language: language,
-      region: "mx"
+      maxResultCount: 50,
+      language, region:"mx"
     };
 
-    setProgress(10);
-    try {
-      const { places } = await Place.searchByText(request);
+    try{
+      const { places } = await Place.searchByText(req);
       const total = places?.length || 0;
-      $("#log").textContent += `\nResultados recibidos: ${total}`;
-      if (!total){ renderTableBody(); return; }
+      log(`Resultados: ${total}`); setProgress(15);
+      if(!total){ rows=[]; renderBody(); return; }
 
-      // Procesamiento
-      let i = 0;
-      for (const p of places){
+      rows=[]; let i=0;
+      for(const p of places){
         i++;
-        // Ciudad/estado
-        let city="", state="";
-        if (Array.isArray(p.addressComponents)){
-          for (const c of p.addressComponents){
-            const types = c.types || [];
-            const longTxt = c.longText || c.long_name || c.name || "";
-            if (types.includes("locality") || types.includes("sublocality") || types.includes("postal_town")) city = longTxt || city;
-            if (types.includes("administrative_area_level_1")) state = longTxt || state;
+
+        // Address components -> city/state/postal
+        let city="", state="", postal="";
+        if(Array.isArray(p.addressComponents)){
+          for(const c of p.addressComponents){
+            const t=c.types||[];
+            const longTxt=c.longText||c.long_name||c.name||"";
+            if(t.includes("locality")||t.includes("sublocality")||t.includes("postal_town")) city=city||longTxt;
+            if(t.includes("administrative_area_level_1")) state=state||longTxt;
+            if(t.includes("postal_code")) postal=postal||longTxt;
           }
         }
-        // Lat/Lng
-        const latVal = p.location?.latLng?.lat || p.location?.lat;
-        const lngVal = p.location?.latLng?.lng || p.location?.lng;
 
-        // Email (beta): best-effort desde homepage (CORS puede bloquear)
-        let email="";
-        if (includeEmail && p.websiteUri){
-          try {
-            email = await tryExtractEmail(p.websiteUri, emailTimeout*1000);
-          } catch (e) { email=""; }
-        }
+        // Location string como "Ciudad - Estado" (fallback a lat,lng si no hay)
+        const locLabel = (city||state) ? `${city}${city&&state?" - ":""}${state}` : `${center.lat}, ${center.lng}`;
 
-        const row = {
-          "Keyword": kw,
-          "Location": `${center.lat}, ${center.lng} (${radius}m)`,
-          "Company name": p.displayName || "",
+        // Phone
+        const phone = p.nationalPhoneNumber || p.internationalPhoneNumber || "";
+
+        // CID desde la URL de Google Maps (si existe ?cid=)
+        const cid = extractCID(p.googleMapsUri||"");
+
+        rows.push({
+          "KW": kw,
+          "Location": locLabel,
+          "Company Name": p.displayName || "",
           "Category": p.primaryType || (p.types ? p.types.join("|") : ""),
           "Website": p.websiteUri || "",
-          "Country Code": (p.internationalPhoneNumber && p.internationalPhoneNumber.match(/^\+?\d+/)?.[0]) || "",
-          "Phone": p.nationalPhoneNumber || p.internationalPhoneNumber || "",
-          "Address": p.formattedAddress || "",
-          "City": city, "State": state,
-          "Rating": p.rating ?? "", "Rating count": p.userRatingCount ?? "",
-          "Maplink": p.googleMapsUri || ""
-        };
-        if (includeLatLng){ row["Lat"]= latVal ?? ""; row["Lng"]= lngVal ?? ""; }
-        if (includeEmail){ row["Email"]= email; }
+          "Phone": phone,
+          "email": "", // Google no expone email; requeriría scraping del website con backend
+          "address": p.formattedAddress || "",
+          "Postal Code + City": (postal?postal+" ":"") + (city||""),
+          "state": state || "",
+          "pin code": postal || "",
+          "# Reviews": p.userRatingCount ?? "",
+          "Review": p.rating ?? "",
+          "CID": cid,
+          "MapLink": p.googleMapsUri || ""
+        });
 
-        rows.push(row);
-
-        setProgress(10 + Math.round((i/total)*80));
-        if (i % 5 === 0) renderTableBody(); // refresca parcialmente
+        if(i%5===0) renderBody();
+        setProgress(15 + Math.round((i/total)*80));
       }
-      setProgress(100);
-      renderTableBody();
-      $("#log").textContent += `\nListo. Total filas: ${rows.length}`;
-    } catch (e) {
-      $("#log").textContent += `\nError: ${e && e.message ? e.message : e}`;
-      $("#log").textContent += `\nPista: revisa que Places API (New) esté habilitada y que la key permita Maps JS + Places (New) con HTTP Referrers.`;
-    }
-  });
 
-  // Intento simple de extraer email (si CORS permite)
-  async function tryExtractEmail(url, timeoutMs){
-    const ctrl = new AbortController();
-    const to = setTimeout(()=>ctrl.abort(), timeoutMs);
+      setProgress(100);
+      renderBody();
+      log("Listo.");
+    }catch(e){
+      log("Error: " + (e && e.message ? e.message : e));
+      log("Pista: habilita Billing + Places API (New) y autoriza tu dominio en la API key.");
+    }
+  }
+
+  function extractCID(url){
     try{
-      const res = await fetch(url, { mode:"cors", signal: ctrl.signal });
-      const text = await res.text();
-      const m = text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
-      return m ? m[0] : "";
-    } catch{ return ""; }
-    finally { clearTimeout(to); }
+      if(!url) return "";
+      const u = new URL(url);
+      const cid = u.searchParams.get("cid");
+      if(cid) return cid;
+      const m = url.match(/[?&]cid=(\d+)/);
+      return m? m[1] : "";
+    }catch{ return ""; }
   }
   </script>
 </body>
