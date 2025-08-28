@@ -5,75 +5,33 @@
   <title>Scrapping Tool — Encabezados estilo hoja</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root { color-scheme: light dark; --card:#121212; --muted:#1e1e1e; --text:#e5e5e5; --border:#2d2d2d; --primary:#22c55e; }
+    :root { color-scheme: light dark; --card:#121212; --muted:#1e1e1e; --text:#e5e5e5; --border:#2d2d2d; --primary:#22c55e; --danger:#ef4444; }
     *{box-sizing:border-box}
     body{
-      margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-      background:#0b0b0c;
-      color:var(--text);
-      position:relative;
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      background:#0b0b0c; color:var(--text); position:relative;
     }
+    /* Fondo patrón */
     body::before{
-      content:"";
-      position:fixed; inset:0; z-index:-1; pointer-events:none;
-      background-image:url("./Patrones_2.png");
-      background-repeat:repeat;
-      background-position:center;
-      background-size:340px auto;
-      opacity:.12;
+      content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+      background-image:url("./Patrones_2.png"); background-repeat:repeat; background-position:center;
+      background-size:340px auto; opacity:.12;
     }
 
-    .app{min-height:100vh;display:grid;grid-template-columns:320px 1fr;gap:16px;padding:16px}
-    aside{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;position:sticky;top:16px;height:fit-content}
-    main{display:flex;flex-direction:column;gap:12px}
+    .app{min-height:100vh; display:grid; grid-template-columns:320px 1fr; gap:16px; padding:16px}
+    aside{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; position:sticky; top:16px; height:fit-content}
+    main{display:flex; flex-direction:column; gap:12px}
     h1{margin:0 0 8px}
-    label{display:block;margin:10px 0 6px;font-weight:600}
-    input,textarea,select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--muted);color:var(--text)}
-    textarea{min-height:60px}
-    .row{display:flex;gap:8px}
-    .toolbar{background:var(--card);border:1px solid var(--border);border-radius:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px}
-    .btn{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--muted);cursor:pointer;font-weight:600}
-    .btn.primary{background:var(--primary);color:#041e10;border-color:transparent}
-    .searchbox{flex:1;min-width:220px}
-    .panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px}
-    #log{white-space:pre-wrap;font-size:12px;background:var(--muted);padding:10px;border-radius:10px;min-height:56px}
-    .progress{height:8px;background:var(--muted);border-radius:999px;overflow:hidden}
-    .progress>div{height:100%;width:0%;background:var(--primary)}
-    table{width:100%;border-collapse:collapse}
-    thead th{position:sticky;top:0;background:var(--card);z-index:1}
-    th,td{border-bottom:1px solid var(--border);padding:8px 10px;text-align:left;font-size:13px;vertical-align:top}
-    thead input{width:100%;padding:6px 8px;font-size:12px;margin-top:4px;border-radius:8px;border:1px solid var(--border);background:var(--muted);color:var(--text)}
-    .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--border);background:var(--muted);font-size:12px}
-  </style>
-</head>
-<body>
-  <div class="app">
-    <aside>
-      <h1>Scrapping Tool</h1>
-      <p style="margin:0 0 12px;color:#9aa0a6">Google Maps — <b>Places API (New)</b> + Maps JS</p>
+    label{display:block; margin:10px 0 6px; font-weight:600}
+    input,textarea,select{width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:var(--muted); color:var(--text)}
+    textarea{min-height:100px; resize:vertical}
+    .row{display:flex; gap:8px}
+    .pill{display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:12px; border:1px solid var(--border); background:var(--muted); font-size:14px}
+    .dot{width:10px; height:10px; border-radius:50%; background:#22c55e}
+    .hint{color:#9aa0a6; font-size:12px}
+    .progress{height:10px; background:var(--muted); border:1px solid var(--border); border-radius:999px; overflow:hidden}
+    .progress>div{height:100%; width:0%; background:var(--primary)}
 
-      <label>API Key</label>
-      <input id="apiKey" placeholder="pegar aqui la Key"/>
-
-      <label>Keyword</label>
-      <textarea id="keywords">restaurantes</textarea>
-
-      <label>Centro (lat, lng)</label>
-      <div class="row">
-        <input id="lat" value="23.2167"/>
-        <input id="lng" value="-106.4167"/>
-      </div>
-
-      <div class="row">
-        <div style="flex:1">
-          <label>Radio (m)</label>
-          <input id="radius" value="5000"/>
-        </div>
-        <div style="flex:1">
-          <label>Idioma</label>
-          <select id="lang"><option value="es" selected>es</option><option value="en">en</option></select>
-        </div>
-      </div>
-
-      <p style="color:#9aa0a6;font-size:12px">Origen: <span id="origin" class="p
+    .toolbar{background:var(--card); border:1px solid var(--border); border-radius:14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px}
+    .badge{background:#111827; color:#e5e7eb; border:1px solid var(--border); padding:10px 14px; border-radius:12px; font-weight:800; font-size:18px}
+    .btn{padding:1
