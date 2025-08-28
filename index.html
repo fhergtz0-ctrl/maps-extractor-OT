@@ -2,211 +2,383 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>Extracto de Restaurantes (Google Places)</title>
+  <title>Extractor de Restaurantes — UI Pro (Places API New)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root { color-scheme: light dark; }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 20px; max-width: 960px; }
-    h1 { margin-bottom: 6px; }
-    label { display:block; margin: 12px 0 6px; font-weight: 600; }
-    input, button { padding: 8px; font: inherit; }
-    input { width: 100%; max-width: 460px; }
-    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-    .bar { display:flex; gap:12px; align-items:center; margin-top:14px; }
-    .bar button { border-radius: 8px; border: 1px solid #e5e5e5; background: var(--btn-bg, #fff); cursor:pointer; }
-    .bar button:hover { filter: brightness(0.98); }
-    #log { margin-top: 16px; white-space: pre-wrap; font-size: 14px; background: #f5f5f5; padding: 12px; border-radius: 10px; min-height: 100px; }
-    .hint { color:#666; font-size: 12px; }
+    :root { color-scheme: light dark; --card:#fff; --muted:#f3f3f3; --text:#111; --border:#e5e7eb; --primary:#22c55e; --danger:#ef4444; }
     @media (prefers-color-scheme: dark) {
-      .bar button { border-color: #333; }
-      #log { background: #1f1f1f; }
-      .hint { color:#aaa; }
+      :root { --card:#121212; --muted:#1e1e1e; --text:#e5e5e5; --border:#2d2d2d; }
     }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:var(--text); background: #0b0b0c; }
+    .app { min-height:100vh; display:grid; grid-template-columns: 320px 1fr; gap:16px; padding:16px; background: linear-gradient(180deg,#0b0b0c 0%, #111 100%); }
+    aside { background: var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; position:sticky; top:16px; height:fit-content; box-shadow: 0 10px 18px rgba(0,0,0,.08); }
+    .brand { font-size:22px; font-weight:800; margin:0 0 8px; letter-spacing:.2px; }
+    .sub { margin:0 0 14px; color:#8b8b8b; font-size:12px; }
+    label { display:block; font-weight:600; margin:12px 0 6px; }
+    input, textarea, select { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:var(--muted); color:var(--text); outline:none; }
+    textarea { min-height:72px; resize:vertical; }
+    .row { display:flex; gap:8px; }
+    .hint { color:#9aa0a6; font-size:12px; margin-top:6px; }
+    .switch { display:flex; align-items:center; gap:8px; margin-top:8px; }
+    .switch input { width:auto; }
+    main { display:flex; flex-direction:column; gap:12px; }
+    .toolbar { background:var(--card); border:1px solid var(--border); border-radius:14px; display:flex; align-items:center; gap:12px; padding:12px; flex-wrap:wrap; box-shadow: 0 10px 18px rgba(0,0,0,.08); }
+    .stat { flex:1; display:flex; align-items:center; gap:12px; }
+    .badge { background:#111827; color:#e5e7eb; border:1px solid var(--border); padding:10px 14px; border-radius:12px; font-weight:700; font-size:18px; }
+    .btn { padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--muted); cursor:pointer; font-weight:600; }
+    .btn.primary { background:var(--primary); color:#04210f; border-color:transparent; }
+    .btn.danger { background:#181818; color:#fca5a5; border-color:#3f3f3f; }
+    .btn:disabled { opacity:.6; cursor:not-allowed; }
+    .searchbox { flex:1; min-width:220px; }
+    .panel { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px; box-shadow: 0 10px 18px rgba(0,0,0,.08); }
+    #log { white-space:pre-wrap; font-size:12px; background:var(--muted); padding:10px; border-radius:10px; min-height:64px; }
+    table { width:100%; border-collapse:collapse; }
+    thead th { position:sticky; top:0; background:var(--card); z-index:1; }
+    th, td { border-bottom:1px solid var(--border); padding:10px; text-align:left; font-size:14px; vertical-align:top; }
+    thead input { width:100%; padding:8px; font-size:12px; margin-top:4px; border-radius:8px; border:1px solid var(--border); background:var(--muted); color:var(--text); }
+    .progress { height:8px; background:var(--muted); border-radius:999px; overflow:hidden; }
+    .progress > div { height:100%; width:0%; background:var(--primary); }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--border); background:var(--muted); font-size:12px; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .footer-note { font-size:11px; color:#9aa0a6; }
   </style>
 </head>
 <body>
-  <h1>Extraer Restaurantes con Google Places</h1>
-  <p class="hint"><strong>Paso 4:</strong> Pega tu API key de Google Maps Platform (con <code>Places API</code> y <code>Maps JavaScript API</code> habilitadas) y lanza la búsqueda.</p>
+  <div class="app">
+    <aside>
+      <h1 class="brand">Extractor de Restaurantes</h1>
+      <p class="sub">Google Maps Platform — <strong>Places API (New)</strong> + <strong>Maps JS</strong></p>
 
-  <label>API Key</label>
-  <input id="apiKey" placeholder="AIza... (tu key)" />
+      <label>API Key</label>
+      <input id="apiKey" placeholder="AIza... (tu key)" />
 
-  <label>Búsqueda</label>
-  <input id="query" value="restaurantes" />
+      <label>Keyword</label>
+      <textarea id="keywords">restaurantes</textarea>
 
-  <label>Centro (lat, lng)</label>
-  <div class="row">
-    <input id="lat" value="23.2167" />
-    <input id="lng" value="-106.4167" />
+      <label>Centro (lat, lng)</label>
+      <div class="row">
+        <input id="lat" value="23.2167" />
+        <input id="lng" value="-106.4167" />
+      </div>
+      <div class="grid2">
+        <div>
+          <label>Radio (m)</label>
+          <input id="radius" value="5000" />
+        </div>
+        <div>
+          <label>Idioma</label>
+          <select id="lang">
+            <option value="es" selected>es</option>
+            <option value="en">en</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="switch">
+        <input type="checkbox" id="includeLatLng" checked />
+        <label for="includeLatLng">Extract Lat & Long</label>
+      </div>
+      <div class="switch">
+        <input type="checkbox" id="extractEmail" />
+        <label for="extractEmail">Extract Email (beta)</label>
+      </div>
+      <div class="grid2">
+        <div>
+          <label>Timeout Email (s)</label>
+          <input id="emailTimeout" value="10" />
+        </div>
+        <div>
+          <label>Máx. Resultados</label>
+          <input id="maxResults" value="40" />
+        </div>
+      </div>
+
+      <p class="hint">Origen detectado: <span id="origin" class="pill"></span></p>
+      <div class="footer-note">Google no expone email. El intento “beta” depende de CORS del sitio.</div>
+    </aside>
+
+    <main>
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="stat">
+          <span class="badge"><span id="count">0</span></span>
+          <div>
+            <div style="font-weight:700; font-size:13px;">RESULTADOS ENCONTRADOS</div>
+            <div class="progress" aria-label="progreso"><div id="bar"></div></div>
+          </div>
+        </div>
+
+        <button class="btn danger" id="clear">Limpiar Datos</button>
+        <button class="btn" id="export">Descargar</button>
+        <input class="searchbox" id="globalSearch" placeholder="Buscar en la tabla…" />
+        <button class="btn primary" id="start">Start Extracting</button>
+      </div>
+
+      <!-- Results table -->
+      <div class="panel">
+        <div id="log"></div>
+        <div style="height:14px"></div>
+        <div style="overflow:auto; max-height:60vh; border:1px solid var(--border); border-radius:10px;">
+          <table id="table">
+            <thead id="thead"></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
   </div>
-  <div class="hint">Ejemplo: Mazatlán, Sinaloa</div>
-
-  <label>Radio (metros)</label>
-  <input id="radius" value="5000" />
-
-  <div class="bar">
-    <button id="run" type="button">Buscar y generar CSV</button>
-  </div>
-
-  <div id="log">Origen detectado: <span id="origin"></span></div>
 
   <script>
   "use strict";
 
-  // Espera a que el DOM exista (evita errores si el script se mueve al <head>)
-  document.addEventListener("DOMContentLoaded", () => {
-    const originSpan = document.getElementById("origin");
-    if (originSpan) originSpan.textContent = location.origin;
+  // ======= UTILIDADES =======
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+  const originSpan = $("#origin"); originSpan.textContent = location.origin;
 
-    const runBtn = document.getElementById("run");
-    if (!runBtn) {
-      console.error('No encontré el botón #run. Asegúrate de tener <button id="run">…</button>.');
-      return;
+  function toStr(v){ return v == null ? "" : String(v); }
+  function escCSV(v){ return '"' + toStr(v).replace(/"/g,'""') + '"'; }
+  function downloadCSV(filename, rows){
+    if (!rows.length) return alert("No hay filas.");
+    const headers = Object.keys(rows[0]);
+    const lines = [headers.map(escCSV).join(",")];
+    for (const r of rows) lines.push(headers.map(h => escCSV(r[h])).join(","));
+    const blob = new Blob([lines.join("\n")], { type:"text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+  function log(msg){
+    const el = $("#log");
+    el.textContent = (el.textContent ? el.textContent + "\n" : "") + msg;
+    console.log("[Extractor]", msg);
+  }
+  function setProgress(pct){ $("#bar").style.width = Math.max(0, Math.min(100, pct)) + "%"; }
+
+  // ======= ESTADO =======
+  let rows = [];
+  let tableColumns = [
+    "Keyword","Location","Company name","Category","Website","Country Code","Phone",
+    "Address","City","State","Rating","Rating count","Maplink"
+  ];
+  let includeLatLng = true;
+  let includeEmail = false;
+
+  // ======= TABLA =======
+  function renderTableHeader(){
+    const head = $("#thead"); head.innerHTML = "";
+    const cols = [...tableColumns];
+    if (includeLatLng && !cols.includes("Lat")) cols.splice(5,0,"Lat","Lng");
+    if (includeEmail && !cols.includes("Email")) cols.splice(5,0,"Email");
+    const tr1 = document.createElement("tr");
+    const tr2 = document.createElement("tr");
+    for (const c of cols){
+      const th = document.createElement("th"); th.textContent = c; tr1.appendChild(th);
+      const th2 = document.createElement("th");
+      const inp = document.createElement("input"); inp.placeholder = "filtrar…";
+      inp.dataset.col = c;
+      inp.addEventListener("input", applyFilters);
+      th2.appendChild(inp);
+      tr2.appendChild(th2);
     }
+    head.appendChild(tr1); head.appendChild(tr2);
+  }
+  function renderTableBody(){
+    const body = $("#tbody"); body.innerHTML = "";
+    const filters = {};
+    $$("#thead input").forEach(i => { const v=i.value.trim().toLowerCase(); if (v) filters[i.dataset.col]=v; });
 
-    function toStr(v){ return v == null ? "" : String(v); }
-    function esc(v){ return '"' + toStr(v).replace(/"/g,'""') + '"'; }
-
-    function downloadCSV(filename, rows){
-      if (!rows.length) { alert("No hay filas para exportar."); return; }
-      const headers = Object.keys(rows[0]);
-      const lines = [headers.map(esc).join(",")];
-      for (const r of rows) lines.push(headers.map(h => esc(r[h])).join(","));
-      const blob = new Blob([lines.join("\n")], { type:"text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href = url; a.download = filename;
-      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    }
-
-    function log(msg){
-      const el = document.getElementById("log");
-      el.textContent = (el.textContent ? el.textContent + "\n" : "") + msg;
-      console.log("[Extractor]", msg);
-    }
-
-    // Sugerencias según status de Places
-    const helpByStatus = {
-      REQUEST_DENIED:
-        "- Verifica que tu proyecto tenga BILLING activado.\n" +
-        "- En tu API key → API restrictions: incluye Maps JavaScript API y Places API.\n" +
-        "- En Application restrictions: HTTP referrers y agrega " + location.origin + "/*",
-      INVALID_REQUEST:
-        "- Revisa parámetros: query, location y radius.",
-      OVER_QUERY_LIMIT:
-        "- Estás excediendo cuota. Baja velocidad o espera y reintenta.",
-      UNKNOWN_ERROR:
-        "- Error temporal de Google. Reintenta.",
-      ZERO_RESULTS:
-        "- Sin resultados con esa query/radio. Prueba un radio mayor o cambia la ciudad."
-    };
-
-    runBtn.addEventListener("click", () => {
-      const key = document.getElementById("apiKey").value.trim();
-      if (!key) { alert("Coloca tu API key."); return; }
-
-      // Elimina carga previa si existía
-      const existing = document.querySelector('script[data-dyn="mapsjs"]');
-      if (existing) existing.remove();
-
-      log("Cargando Google Maps JS…");
-      const s = document.createElement("script");
-      s.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(key) + "&libraries=places&v=quarterly";
-      s.async = true; s.defer = true; s.dataset.dyn = "mapsjs";
-      s.onload = () => { log("Maps JS cargado ✓"); start(); };
-      s.onerror = () => { log("No se pudo cargar Google Maps JS API. Revisa key, restricciones de dominio y que Places + Maps JS estén habilitadas."); };
-      document.body.appendChild(s);
+    const cols = Array.from($$("#thead tr:first-child th")).map(th=>th.textContent);
+    const filtered = rows.filter(r=>{
+      for (const k in filters){
+        const val = toStr(r[k] ?? "").toLowerCase();
+        if (!val.includes(filters[k])) return false;
+      }
+      return true;
     });
 
-    function start() {
-      const q = document.getElementById("query").value.trim();
-      const lat = parseFloat(document.getElementById("lat").value);
-      const lng = parseFloat(document.getElementById("lng").value);
-      const radius = parseInt(document.getElementById("radius").value, 10) || 3000;
+    for (const r of filtered){
+      const tr = document.createElement("tr");
+      for (const c of cols){
+        const td = document.createElement("td");
+        td.textContent = toStr(r[c] ?? "");
+        tr.appendChild(td);
+      }
+      body.appendChild(tr);
+    }
+    $("#count").textContent = filtered.length;
+  }
+  function applyFilters(){ renderTableBody(); }
 
-      log(`Inicializando búsqueda… query="${q}", lat=${lat}, lng=${lng}, radius=${radius}`);
+  // Búsqueda global
+  $("#globalSearch").addEventListener("input", e=>{
+    const term = e.target.value.trim().toLowerCase();
+    $$("#thead input").forEach(i=> i.value = "");
+    if (!term){ renderTableBody(); return; }
+    const body = $("#tbody"); body.innerHTML = "";
+    const cols = Array.from($$("#thead tr:first-child th")).map(th=>th.textContent);
+    const filtered = rows.filter(r => Object.values(r).some(v => toStr(v).toLowerCase().includes(term)));
+    for (const r of filtered){
+      const tr = document.createElement("tr");
+      for (const c of cols){
+        const td = document.createElement("td");
+        td.textContent = toStr(r[c] ?? "");
+        tr.appendChild(td);
+      }
+      body.appendChild(tr);
+    }
+    $("#count").textContent = filtered.length;
+  });
 
-      // Contenedor invisible para PlacesService
-      const dummy = document.createElement("div");
-      dummy.style.width = "0"; dummy.style.height = "0";
-      document.body.appendChild(dummy);
+  // ======= EVENTOS UI =======
+  $("#clear").addEventListener("click", ()=>{
+    rows = [];
+    setProgress(0);
+    $("#count").textContent = "0";
+    $("#log").textContent = "";
+    renderTableBody();
+  });
+  $("#export").addEventListener("click", ()=> downloadCSV("restaurantes.csv", rows));
 
-      const validLatLng = Number.isFinite(lat) && Number.isFinite(lng);
-      const center = validLatLng ? new google.maps.LatLng(lat, lng)
-                                 : new google.maps.LatLng(23.2167, -106.4167);
-      if (!validLatLng) log("Lat/Lng inválidos. Usando Mazatlán por defecto.");
+  $("#includeLatLng").addEventListener("change", e=>{ includeLatLng = e.target.checked; renderTableHeader(); renderTableBody(); });
+  $("#extractEmail").addEventListener("change", e=>{ includeEmail = e.target.checked; renderTableHeader(); renderTableBody(); });
 
-      const map = new google.maps.Map(dummy, { center, zoom: 14 });
-      const service = new google.maps.places.PlacesService(map);
+  // ======= GOOGLE MAPS (Places New) =======
+  $("#start").addEventListener("click", async ()=>{
+    const key = $("#apiKey").value.trim();
+    if (!key) return alert("Coloca tu API key.");
 
-      const allPlaces = [];
-      const rows = [];
+    // Carga Maps JS si no está
+    if (!window.google || !google.maps || !google.maps.importLibrary){
+      const s = document.createElement("script");
+      s.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(key) + "&v=quarterly";
+      s.async = true; s.defer = true;
+      s.onerror = ()=> log("No se pudo cargar Google Maps JS API. Revisa key, restricciones y que Places API (New) esté habilitada.");
+      document.body.appendChild(s);
+      await new Promise(res=> s.onload = res);
+    }
 
-      function fetchDetailsNext(i) {
-        if (i >= allPlaces.length) {
-          log(`Listo. Total filas: ${rows.length}`);
-          if (rows.length) downloadCSV("restaurantes.csv", rows);
-          return;
-        }
-        const place = allPlaces[i];
-        const fields = [
-          "name","types","website","formatted_phone_number","international_phone_number",
-          "formatted_address","address_components","rating","user_ratings_total","url"
-        ];
-        service.getDetails({ placeId: place.place_id, fields }, (detail, status) => {
-          log(`getDetails status: ${status}${detail && detail.name ? " → " + detail.name : ""}`);
-          if (status === google.maps.places.PlacesServiceStatus.OK && detail) {
-            let city = "", state = "";
-            (detail.address_components || []).forEach(c => {
-              if (c.types.includes("locality") || c.types.includes("sublocality")) city = c.long_name;
-              if (c.types.includes("administrative_area_level_1")) state = c.long_name;
-            });
-            rows.push({
-              company_name: detail.name || "",
-              category: (detail.types || []).join("|"),
-              website: detail.website || "",
-              phone: detail.formatted_phone_number || detail.international_phone_number || "",
-              email: "",                // Google no expone email
-              address: detail.formatted_address || "",
-              city, state,
-              rating: detail.rating ?? "",
-              rating_count: detail.user_ratings_total ?? "",
-              reviews: "",
-              maplink: detail.url || ""
-            });
-          } else {
-            const tip = helpByStatus[status] || "";
-            if (tip) log("Pista:\n" + tip);
+    // Reinicia estado UI
+    $("#log").textContent = `Origen: ${location.origin}\nCargando librerías…`;
+    setProgress(5);
+    const { Map } = await google.maps.importLibrary("maps");
+    const { Place } = await google.maps.importLibrary("places");
+    $("#log").textContent += `\nMaps JS cargado ✓`;
+
+    const keywordLines = $("#keywords").value.split("\n").map(s=>s.trim()).filter(Boolean);
+    const kw = keywordLines.length ? keywordLines[0] : "restaurantes";
+    const lat = parseFloat($("#lat").value);
+    const lng = parseFloat($("#lng").value);
+    const radius = parseInt($("#radius").value,10) || 3000;
+    const language = $("#lang").value || "es";
+    const maxResults = Math.max(1, Math.min(80, parseInt($("#maxResults").value,10) || 40));
+    const emailTimeout = Math.max(1, Math.min(20, parseInt($("#emailTimeout").value,10) || 10));
+
+    const center = (Number.isFinite(lat) && Number.isFinite(lng)) ? {lat,lng} : {lat:23.2167, lng:-106.4167};
+    const dummy = document.createElement("div"); dummy.style.width="0"; dummy.style.height="0"; document.body.appendChild(dummy);
+    const map = new Map(dummy, { center, zoom: 12 });
+
+    // Cabeceras de tabla según toggles
+    tableColumns = [
+      "Keyword","Location","Company name","Category","Website","Country Code","Phone",
+      "Address","City","State","Rating","Rating count","Maplink"
+    ];
+    if (includeEmail) tableColumns.splice(5,0,"Email");
+    if (includeLatLng) tableColumns.splice(5,0,"Lat","Lng");
+    renderTableHeader();
+
+    rows = [];
+    renderTableBody();
+
+    const request = {
+      textQuery: kw,
+      fields: [
+        "id","displayName","formattedAddress","location","types","primaryType",
+        "websiteUri","nationalPhoneNumber","internationalPhoneNumber",
+        "rating","userRatingCount","googleMapsUri","addressComponents"
+      ],
+      locationBias: map.getCenter(),
+      maxResultCount: maxResults,
+      language: language,
+      region: "mx"
+    };
+
+    setProgress(10);
+    try {
+      const { places } = await Place.searchByText(request);
+      const total = places?.length || 0;
+      $("#log").textContent += `\nResultados recibidos: ${total}`;
+      if (!total){ renderTableBody(); return; }
+
+      // Procesamiento
+      let i = 0;
+      for (const p of places){
+        i++;
+        // Ciudad/estado
+        let city="", state="";
+        if (Array.isArray(p.addressComponents)){
+          for (const c of p.addressComponents){
+            const types = c.types || [];
+            const longTxt = c.longText || c.long_name || c.name || "";
+            if (types.includes("locality") || types.includes("sublocality") || types.includes("postal_town")) city = longTxt || city;
+            if (types.includes("administrative_area_level_1")) state = longTxt || state;
           }
-          setTimeout(() => fetchDetailsNext(i+1), 200); // sé amable con la cuota
-        });
-      }
-
-      function handleTextSearch(results, status, pagination) {
-        log("TextSearch status: " + status + (results && results.length ? ` (recibidos ${results.length})` : ""));
-        if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length) {
-          allPlaces.push(...results);
-          log("Resultados acumulados: " + allPlaces.length);
-          if (pagination && pagination.hasNextPage) {
-            setTimeout(() => pagination.nextPage(), 2000); // recomienda ~2s
-          } else {
-            log("Descargando detalles de cada lugar…");
-            fetchDetailsNext(0);
-          }
-        } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-          log("Sin resultados. Prueba un radio mayor o una query diferente.");
-        } else {
-          const tip = helpByStatus[status] || "";
-          if (tip) log("Pista:\n" + tip);
         }
-      }
+        // Lat/Lng
+        const latVal = p.location?.latLng?.lat || p.location?.lat;
+        const lngVal = p.location?.latLng?.lng || p.location?.lng;
 
-      try {
-        service.textSearch({ query: q, location: center, radius }, handleTextSearch);
-      } catch (e) {
-        log("Excepción al llamar textSearch: " + e.message);
+        // Email (beta): best-effort desde homepage (CORS puede bloquear)
+        let email="";
+        if (includeEmail && p.websiteUri){
+          try {
+            email = await tryExtractEmail(p.websiteUri, emailTimeout*1000);
+          } catch (e) { email=""; }
+        }
+
+        const row = {
+          "Keyword": kw,
+          "Location": `${center.lat}, ${center.lng} (${radius}m)`,
+          "Company name": p.displayName || "",
+          "Category": p.primaryType || (p.types ? p.types.join("|") : ""),
+          "Website": p.websiteUri || "",
+          "Country Code": (p.internationalPhoneNumber && p.internationalPhoneNumber.match(/^\+?\d+/)?.[0]) || "",
+          "Phone": p.nationalPhoneNumber || p.internationalPhoneNumber || "",
+          "Address": p.formattedAddress || "",
+          "City": city, "State": state,
+          "Rating": p.rating ?? "", "Rating count": p.userRatingCount ?? "",
+          "Maplink": p.googleMapsUri || ""
+        };
+        if (includeLatLng){ row["Lat"]= latVal ?? ""; row["Lng"]= lngVal ?? ""; }
+        if (includeEmail){ row["Email"]= email; }
+
+        rows.push(row);
+
+        setProgress(10 + Math.round((i/total)*80));
+        if (i % 5 === 0) renderTableBody(); // refresca parcialmente
       }
+      setProgress(100);
+      renderTableBody();
+      $("#log").textContent += `\nListo. Total filas: ${rows.length}`;
+    } catch (e) {
+      $("#log").textContent += `\nError: ${e && e.message ? e.message : e}`;
+      $("#log").textContent += `\nPista: revisa que Places API (New) esté habilitada y que la key permita Maps JS + Places (New) con HTTP Referrers.`;
     }
   });
+
+  // Intento simple de extraer email (si CORS permite)
+  async function tryExtractEmail(url, timeoutMs){
+    const ctrl = new AbortController();
+    const to = setTimeout(()=>ctrl.abort(), timeoutMs);
+    try{
+      const res = await fetch(url, { mode:"cors", signal: ctrl.signal });
+      const text = await res.text();
+      const m = text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
+      return m ? m[0] : "";
+    } catch{ return ""; }
+    finally { clearTimeout(to); }
+  }
   </script>
 </body>
 </html>
