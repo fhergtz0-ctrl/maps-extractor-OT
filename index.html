@@ -4,12 +4,56 @@
   <meta charset="utf-8" />
   <title>Scrapping Tool — Encabezados estilo hoja</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- CSS externos -->
-  <link rel="stylesheet" href="/assets/css/scrapping-tool.css">
-  <link rel="stylesheet" href="/assets/css/utilities.css">
-  <link rel="stylesheet" href="/assets/css/print.css" media="print">
+  <!-- CSS -->
+  <link rel="stylesheet" href="./assets/css/scrapping-tool.css?v=3">
+  <link rel="stylesheet" href="./assets/css/utilities.css?v=3">
+  <link rel="stylesheet" href="./assets/css/print.css?v=3" media="print">
+  <style>
+    /* ------- Estilos mínimos para Auth (reutiliza paleta existente) ------- */
+    .auth-overlay{
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.45);
+      backdrop-filter: blur(2px);
+    }
+    .auth-card{
+      width: min(420px, 92vw);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .auth-card h2{ margin: 0 0 6px; }
+    .auth-actions{ display:flex; gap:8px; align-items:center; justify-content:space-between; }
+    .auth-error{ color:#f87171; min-height: 1.2em; }
+  </style>
 </head>
 <body>
+  <!-- ======== Overlay de Autenticación ======== -->
+  <div id="auth" class="auth-overlay">
+    <div class="auth-card">
+      <h2>Bienvenido</h2>
+      <p class="hint">Crea tu cuenta o inicia sesión para usar la herramienta.</p>
+
+      <form id="authForm" class="mt-12">
+        <label>Email</label>
+        <input id="authEmail" type="email" placeholder="tucorreo@ejemplo.com" required />
+
+        <label class="mt-12">Contraseña</label>
+        <input id="authPass" type="password" placeholder="mínimo 6 caracteres" minlength="6" required />
+
+        <div class="auth-actions mt-16">
+          <button type="submit" class="btn primary" id="authSubmit">Ingresar</button>
+          <button type="button" class="btn" id="authToggle">Crear cuenta</button>
+        </div>
+        <div id="authMsg" class="auth-error mt-12"></div>
+        <p class="hint mt-12">Nota: este acceso es local (solo navegador). No uses contraseñas reales.</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======== App ======== -->
   <div class="app">
     <aside>
       <h1>Scrapping Tool</h1>
@@ -27,14 +71,15 @@
       <textarea id="keywords">Restaurante</textarea>
 
       <label id="locLabel">Ubicaciones (0)</label>
-      <textarea id="locations">Hermosillo - Sonora
-Nogales - Sonora</textarea>
+      <textarea id="locations">Hermosillo Sonora
+Nogales Sonora</textarea>
 
       <label>Segundos Max para Extraer Correo</label>
       <input id="emailTimeout" value="10" />
       <p class="hint">El email no lo entrega Google; se intenta detectar en la web del negocio (puede fallar por CORS).</p>
 
       <p class="hint">Origen: <span id="origin"></span></p>
+      <p class="hint">Usuario: <span id="whoami">—</span></p>
     </aside>
 
     <main>
@@ -57,6 +102,7 @@ Nogales - Sonora</textarea>
 
         <input class="searchbox" id="globalSearch" placeholder="Buscar..." />
         <button class="btn primary" id="start">Iniciar extracción</button>
+        <button class="btn" id="logout" title="Cerrar sesión">Cerrar sesión</button>
       </div>
 
       <!-- Resultados -->
@@ -76,10 +122,114 @@ Nogales - Sonora</textarea>
   <script>
   "use strict";
 
+  /* ===========================
+     AUTH LOCAL (demo, sin backend)
+     =========================== */
+  const AUTH = {
+    _usersKey: 'st_users',
+    _sessionKey: 'st_session',
+
+    _loadUsers(){
+      try{ return JSON.parse(localStorage.getItem(this._usersKey)||'{}'); }
+      catch{ return {}; }
+    },
+    _saveUsers(users){
+      localStorage.setItem(this._usersKey, JSON.stringify(users));
+    },
+    _toHex(buf){
+      return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+    },
+    async _hash(pw){
+      const enc = new TextEncoder();
+      const buf = await crypto.subtle.digest('SHA-256', enc.encode(pw));
+      return this._toHex(buf);
+    },
+    current(){ return localStorage.getItem(this._sessionKey)||null; },
+    logout(){ localStorage.removeItem(this._sessionKey); },
+
+    async register(email, password){
+      email = (email||'').trim().toLowerCase();
+      if(!email) throw new Error('Email requerido');
+      if(!password || password.length<6) throw new Error('Contraseña mínima de 6 caracteres');
+      const users = this._loadUsers();
+      if(users[email]) throw new Error('Ya existe una cuenta con ese correo');
+      users[email] = await this._hash(password);
+      this._saveUsers(users);
+      localStorage.setItem(this._sessionKey, email);
+      return email;
+    },
+    async login(email, password){
+      email = (email||'').trim().toLowerCase();
+      const users = this._loadUsers();
+      if(!users[email]) throw new Error('No existe una cuenta con ese correo');
+      const h = await this._hash(password||'');
+      if (users[email] !== h) throw new Error('Contraseña incorrecta');
+      localStorage.setItem(this._sessionKey, email);
+      return email;
+    }
+  };
+
+  // UI auth
+  const authEl = document.getElementById('auth');
+  const authForm = document.getElementById('authForm');
+  const authEmail = document.getElementById('authEmail');
+  const authPass  = document.getElementById('authPass');
+  const authSubmit= document.getElementById('authSubmit');
+  const authToggle= document.getElementById('authToggle');
+  const authMsg   = document.getElementById('authMsg');
+  let authMode = 'login'; // 'login' | 'register'
+
+  function setAuthMode(mode){
+    authMode = mode;
+    authSubmit.textContent = mode === 'login' ? 'Ingresar' : 'Crear cuenta';
+    authToggle.textContent = mode === 'login' ? 'Crear cuenta' : 'Ya tengo cuenta';
+    authMsg.textContent = '';
+  }
+  setAuthMode('login');
+
+  function showAuth(show){
+    authEl.classList.toggle('hidden', !show);
+  }
+
+  authToggle.addEventListener('click', () => {
+    setAuthMode(authMode === 'login' ? 'register' : 'login');
+  });
+
+  authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    authMsg.textContent = '';
+    const email = authEmail.value;
+    const pass  = authPass.value;
+    try{
+      if (authMode === 'login') {
+        await AUTH.login(email, pass);
+      } else {
+        await AUTH.register(email, pass);
+      }
+      authPass.value = '';
+      whoami.textContent = AUTH.current() || '—';
+      showAuth(false);
+    }catch(err){
+      authMsg.textContent = err?.message || String(err);
+    }
+  });
+
+  // Logout
+  document.getElementById('logout').addEventListener('click', () => {
+    AUTH.logout();
+    whoami.textContent = '—';
+    showAuth(true);
+  });
+
+  /* ===========================
+     APP (tu lógica de scraping)
+     =========================== */
+
   // ===== UTILIDAD =====
   const $ = (s, r=document)=>r.querySelector(s);
   const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
   $("#origin").textContent = location.origin;
+  const whoami = $("#whoami");
 
   const headersWantedBase = [
     "KW","Location","Company Name","Category","Website","Phone","email","address",
@@ -169,6 +319,13 @@ Nogales - Sonora</textarea>
 
   renderHeader(); renderBody();
 
+  // Mostrar/hide auth al cargar
+  (function bootstrapAuth(){
+    const user = AUTH.current();
+    if (user) { whoami.textContent = user; showAuth(false); }
+    else { showAuth(true); }
+  })();
+
   // ===== EXTRACCIÓN (lote: keywords x ubicaciones) =====
   $("#start").addEventListener("click", start);
 
@@ -196,127 +353,4 @@ Nogales - Sonora</textarea>
 
     const { Map } = await google.maps.importLibrary("maps");
     const { Place } = await google.maps.importLibrary("places");
-    const geocoder = new google.maps.Geocoder();
-
-    let comboIndex = 0;
-    for (const kw of keywords){
-      for (const loc of locations){
-        comboIndex++;
-        $("#statusText").textContent = `"${kw} in ${loc}"`;
-        $("#comboProgress").textContent = `(${comboIndex}/${totalCombos})`;
-        setComboProgress( Math.round((comboIndex-1)/totalCombos*100) );
-
-        const center = await geocodeAddress(geocoder, loc);
-        if (!center){ log(`No se pudo geocodificar: ${loc}`); continue; }
-
-        const dummy=document.createElement("div"); dummy.style.width="0"; dummy.style.height="0"; document.body.appendChild(dummy);
-        const map=new Map(dummy,{center,zoom:12});
-
-        const req = {
-          textQuery: kw,
-          fields: [
-            "id","displayName","formattedAddress","location","types","primaryType",
-            "websiteUri","nationalPhoneNumber","internationalPhoneNumber",
-            "rating","userRatingCount","googleMapsUri","addressComponents"
-          ],
-          locationBias: map.getCenter(),
-          maxResultCount: 50,
-          language, region:"mx"
-        };
-
-        try{
-          const { places } = await Place.searchByText(req);
-          const total = places?.length || 0;
-          log(`(${comboIndex}/${totalCombos}) ${kw} @ ${loc}: ${total} resultados`);
-
-          let i=0;
-          for (const p of places){
-            i++;
-
-            // Address components -> city/state/postal
-            let city="", state="", postal="";
-            if(Array.isArray(p.addressComponents)){
-              for(const c of p.addressComponents){
-                const t=c.types||[];
-                const longTxt=c.longText||c.long_name||c.name||"";
-                if(t.includes("locality")||t.includes("sublocality")||t.includes("postal_town")) city=city||longTxt;
-                if(t.includes("administrative_area_level_1")) state=state||longTxt;
-                if(t.includes("postal_code")) postal=postal||longTxt;
-              }
-            }
-            const phone = p.nationalPhoneNumber || p.internationalPhoneNumber || "";
-            const cid = extractCID(p.googleMapsUri||"");
-
-            // Email best-effort (si se activó)
-            let email="";
-            if (includeEmail && p.websiteUri){
-              try { email = await tryExtractEmail(p.websiteUri, emailTimeout*1000); } catch(_) { email=""; }
-            }
-
-            const row = {
-              "KW": kw,
-              "Location": loc,
-              "Company Name": p.displayName || "",
-              "Category": p.primaryType || (p.types ? p.types.join("|") : ""),
-              "Website": p.websiteUri || "",
-              "Phone": phone,
-              "email": email,
-              "address": p.formattedAddress || "",
-              "Postal Code + City": (postal?postal+" ":"") + (city||""),
-              "state": state || "",
-              "pin code": postal || "",
-              "# Reviews": p.userRatingCount ?? "",
-              "Review": p.rating ?? "",
-              "CID": cid,
-              "MapLink": p.googleMapsUri || ""
-            };
-            rows.push(row);
-
-            if (i % 5 === 0) renderBody();
-            setProgress( Math.min(100, Math.round((i/Math.max(1,total))*100)) );
-          }
-          renderBody();
-        }catch(e){
-          log(`Error en "${kw}" @ "${loc}": ${e && e.message ? e.message : e}`);
-        }
-      }
-    }
-    setComboProgress(100);
-    log("Proceso finalizado.");
-  }
-
-  async function geocodeAddress(geocoder, address){
-    try{
-      const { results } = await geocoder.geocode({ address });
-      if (results && results[0]){
-        const { lat, lng } = results[0].geometry.location;
-        return { lat: lat(), lng: lng() };
-      }
-      return null;
-    }catch{ return null; }
-  }
-
-  async function tryExtractEmail(url, timeoutMs){
-    const ctrl = new AbortController();
-    const to = setTimeout(()=>ctrl.abort(), timeoutMs);
-    try{
-      const res = await fetch(url, { mode:"cors", signal: ctrl.signal });
-      const text = await res.text();
-      const m = text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
-      return m ? m[0] : "";
-    }catch{ return ""; } finally { clearTimeout(to); }
-  }
-
-  function extractCID(url){
-    try{
-      if(!url) return "";
-      const u = new URL(url);
-      const cid = u.searchParams.get("cid");
-      if(cid) return cid;
-      const m = url.match(/[?&]cid=(\d+)/);
-      return m? m[1] : "";
-    }catch{ return ""; }
-  }
-  </script>
-</body>
-</html>
+    const geocoder = new go
