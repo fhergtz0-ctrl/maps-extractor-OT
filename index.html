@@ -4,6 +4,18 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Scrapping Tool — Google Places</title>
+
+<!-- CSP básica para que todo funcione con inline scripts/estilos -->
+<meta http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self' https://maps.googleapis.com https://maps.gstatic.com 'unsafe-inline';
+        connect-src 'self' https://places.googleapis.com https://api.countapi.xyz https://ipapi.co;
+        img-src 'self' data: https://maps.gstatic.com https://maps.googleapis.com https://lh3.googleusercontent.com https://*.ggpht.com;
+        style-src 'self' 'unsafe-inline';
+        frame-src https://www.google.com;
+      ">
+
 <style>
   :root{ --panel:#111; --border:#2a2a2a; --fg:#eaeaea; --muted:#bfbfbf; --accent:#1db954; }
   html,body{margin:0;padding:0;background:#0b0b0b;color:var(--fg);font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
@@ -12,6 +24,7 @@
   /* ======= BARRA ÚNICA ======= */
   .unibar{
     display:grid;
+    /* 12 columnas: KW | Ubi | API | Lat | Web | Email | Radio | SegEmail | Extras | Iniciar | Exportar | spacer */
     grid-template-columns: 1.25fr 1.25fr 1fr .8fr .8fr .8fr .6fr .7fr 1.5fr .9fr .9fr auto;
     gap:8px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px;align-items:start;
   }
@@ -31,9 +44,13 @@
   .extras label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--fg)}
   .spacer{min-width:10px}
 
+  /* ======= MÉTRICAS ======= */
+  #metricsBar{margin:10px 0 0;display:flex;gap:12px;align-items:center;font-size:13px;opacity:.9}
+  #metricsBar strong{font-variant-numeric:tabular-nums}
+
   /* ======= TABLA ======= */
-  .panel{margin-top:12px}
-  .log{white-space:pre-wrap;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;max-height:120px;overflow:auto}
+  .panel{margin-top:10px}
+  .log{white-space:pre-wrap;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px;margin:10px 0;max-height:120px;overflow:auto}
   .tblwrap{overflow:auto;max-height:65vh;border:1px solid var(--border);border-radius:10px}
   table{table-layout:fixed;width:100%;border-collapse:separate;border-spacing:0}
   th,td{padding:8px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -59,7 +76,7 @@ Nogales Sonora</textarea>
     </div>
     <div class="cell">
       <div class="head">API Key</div>
-      <input type="text" id="apiKey" placeholder="pegar aqui la Key">
+      <input type="text" id="apiKey" placeholder="pegar aqui la Key" autocomplete="off" autocapitalize="off" spellcheck="false">
     </div>
     <div class="cell">
       <div class="head">Lat &amp; Long</div>
@@ -105,6 +122,13 @@ Nogales Sonora</textarea>
     <div class="spacer"></div>
   </div>
 
+  <!-- ====== MÉTRICAS ====== -->
+  <div id="metricsBar">
+    <span>👀 Visitas: <strong id="visitsCount">—</strong></span>
+    <span>⚙️ Extracciones: <strong id="runsCount">—</strong></span>
+    <span>📍 País: <strong id="countryLabel">—</strong></span>
+  </div>
+
   <!-- ====== RESULTADOS ====== -->
   <div class="panel">
     <div class="log" id="log"></div>
@@ -142,11 +166,6 @@ function buildPhotoUrl(photoName, apiKey, maxW=800, maxH=600){
   return `${base}?${params.toString()}`;
 }
 
-/* ============ Persistencia API KEY ============ */
-const apiKeyEl=$("#apiKey");
-apiKeyEl.value=localStorage.getItem("st_api_key")||"";
-apiKeyEl.addEventListener("change",()=>localStorage.setItem("st_api_key", apiKeyEl.value));
-
 /* ============ Toggles ============ */
 let includeEmail=false, includeWebsite=false, isRunning=false;
 $("#extractEmail").addEventListener("change",e=>{ includeEmail=e.target.checked; renderHeader(); renderBody(); });
@@ -173,7 +192,6 @@ for(const id of Object.keys(toggles)){
 /* ============ Tabla: columnas ============ */
 const BASE_COLS = [
   "KW","Location","Company Name","Category","Website","Phone","email","address",
-  // Acciones (se mostrarán sólo si toggles.actions):
   "Has Reservation","Reservation Provider","Reservation Link","Delivery Providers",
   "Postal Code + City","state","pin code","# Reviews","Review","CID","MapLink",
   "Lat","Lng","Plus Code","Status","Embed"
@@ -194,7 +212,7 @@ let rows=[];
 function currentHeaders(){
   const cols=[...BASE_COLS];
 
-  // Campos extra
+  // Campos extra API
   if(toggles.short) cols.splice(cols.indexOf("Postal Code + City"), 0, "Short Address");
   if(toggles.price) cols.splice(cols.indexOf("CID"), 0, "Price Level");
   if(toggles.hours) cols.splice(cols.indexOf("CID"), 0, "Open Now", "Hours (week)");
@@ -203,14 +221,14 @@ function currentHeaders(){
   if(toggles.types) cols.splice(cols.indexOf("Status"), 0, "Primary Type (display)","Subtypes");
   if(toggles.summary) cols.splice(cols.indexOf("Embed"), 0, "Editorial Summary");
 
-  // Si no se activan acciones, eliminamos sus columnas
+  // Acciones heurísticas
   if(!toggles.actions){
     for(const c of ["Has Reservation","Reservation Provider","Reservation Link","Delivery Providers"]){
       const i=cols.indexOf(c); if(i>-1) cols.splice(i,1);
     }
   }
 
-  // Opciones Website/Email
+  // Website/Email visibles
   if(!includeEmail){ const i=cols.indexOf("email"); if(i>-1) cols.splice(i,1); }
   if(!includeWebsite){ const i=cols.indexOf("Website"); if(i>-1) cols.splice(i,1); }
   return cols;
@@ -397,6 +415,36 @@ async function tryExtractEmail(url, timeoutMs){
   }catch{ return ""; } finally{ clearTimeout(to); }
 }
 
+/* ===== MÉTRICAS (CountAPI + país por IP) ===== */
+const COUNT_NS = (location.hostname || 'local'); // puedes fijarlo a tu dominio si prefieres
+const KEY_VIEWS = 'pageviews';
+const KEY_RUNS  = 'runs';
+
+async function countapiHit(ns,key){
+  try{
+    const r = await fetch(`https://api.countapi.xyz/hit/${encodeURIComponent(ns)}/${encodeURIComponent(key)}`);
+    const j = await r.json(); return j.value ?? null;
+  }catch{ return null; }
+}
+async function countapiGet(ns,key){
+  try{
+    const r = await fetch(`https://api.countapi.xyz/get/${encodeURIComponent(ns)}/${encodeURIComponent(key)}`);
+    const j = await r.json(); return j.value ?? null;
+  }catch{ return null; }
+}
+async function updateMetricsUI(initRuns=false){
+  const v = await countapiHit(COUNT_NS, KEY_VIEWS);
+  const runs = initRuns ? await countapiHit(COUNT_NS, KEY_RUNS) : await countapiGet(COUNT_NS, KEY_RUNS);
+  if($('#visitsCount')) $('#visitsCount').textContent = v ?? '—';
+  if($('#runsCount'))   $('#runsCount').textContent   = runs ?? '—';
+  try{
+    const geo = await fetch('https://ipapi.co/json/').then(r=>r.json());
+    const label = geo?.country_name ? `${geo.country_name} (${geo.country})` : '—';
+    if($('#countryLabel')) $('#countryLabel').textContent = label;
+  }catch{ if($('#countryLabel')) $('#countryLabel').textContent='—'; }
+}
+updateMetricsUI(false);
+
 /* ===== Start ===== */
 window.addEventListener('unhandledrejection',e=>log('Error no capturado: '+(e?.reason?.message||String(e?.reason||e))));
 $("#start").addEventListener("click", start);
@@ -404,7 +452,14 @@ $("#start").addEventListener("click", start);
 async function start(){
   if(isRunning) return; isRunning=true; $("#start").disabled=true;
   try{
-    const key=$("#apiKey").value.trim(); if(!key){ alert("Coloca tu API key."); return; }
+    const key=($("#apiKey").value||"").trim();
+    if(!key){ alert("Coloca tu API key para ejecutar la búsqueda."); return; }
+
+    // incrementa contador de usos y actualiza UI
+    try{
+      const runsNow = await countapiHit(COUNT_NS, KEY_RUNS);
+      if($('#runsCount')) $('#runsCount').textContent = runsNow ?? '—';
+    }catch{}
 
     if(!window.google || !google.maps || !google.maps.importLibrary){
       const s=document.createElement("script");
@@ -472,7 +527,7 @@ async function start(){
             photoUrl = buildPhotoUrl(firstPhotoName, key, 800, 600);
           }
 
-          /* Website + Email (detail fetch si se requieren) */
+          /* Website + Email (detail fetch si se requieren o si actions) */
           let websiteUri="";
           if(includeWebsite || includeEmail || toggles.actions){
             try{
