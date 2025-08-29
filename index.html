@@ -261,4 +261,133 @@ Nogales Sonora</textarea>
     const language="es";
 
     rows=[]; renderBody(); setProgress(0); setComboProgress(0);
-    const totalCombos
+    const totalCombos = keywords.length * locations.length;
+    $("#comboProgress").textContent = `(0/${totalCombos})`;
+
+    const { Map }   = await google.maps.importLibrary("maps");
+    const { Place } = await google.maps.importLibrary("places");
+    const geocoder = new google.maps.Geocoder();
+
+    let comboIndex = 0;
+    for (const kw of keywords){
+      for (const loc of locations){
+        comboIndex++;
+        $("#statusText").textContent = `"${kw}" in "${loc}"`;
+        $("#comboProgress").textContent = `(${comboIndex}/${totalCombos})`;
+        setComboProgress( Math.round((comboIndex-1)/totalCombos*100) );
+
+        const center = await geocodeAddress(geocoder, loc);
+        if (!center){ log(`No se pudo geocodificar: ${loc}`); continue; }
+
+        // Paginamos por REST (más de 20)
+        let places = [];
+        try {
+          places = await textSearchAll({ apiKey: key, textQuery: kw, center, radius: 5000, language });
+        } catch (err) {
+          log(`Error en "${kw}" @ "${loc}": ${err && err.message ? err.message : err}`);
+          continue;
+        }
+
+        log(`(${comboIndex}/${totalCombos}) ${kw} @ ${loc}: ${places.length} resultados`);
+        let i=0;
+
+        for (const p of places){
+          i++;
+
+          // Normalizar displayName (REST devuelve objeto)
+          const displayName = (typeof p.displayName === "string") ? p.displayName
+                              : (p.displayName && p.displayName.text) ? p.displayName.text
+                              : "";
+
+          // Address components -> city/state/postal
+          let city="", state="", postal="";
+          if(Array.isArray(p.addressComponents)){
+            for(const c of p.addressComponents){
+              const t=c.types||[];
+              const longTxt=c.longText||c.long_name||c.name||"";
+              if(t.includes("locality")||t.includes("sublocality")||t.includes("postal_town")) city=city||longTxt;
+              if(t.includes("administrative_area_level_1")) state=state||longTxt;
+              if(t.includes("postal_code")) postal=postal||longTxt;
+            }
+          }
+
+          const phone = p.nationalPhoneNumber || p.internationalPhoneNumber || "";
+
+          // Fallback de MapLink (sin details)
+          const mapLinkFallback = "https://www.google.com/maps/search/?api=1&query=" +
+            encodeURIComponent((displayName || "") + " " + (p.formattedAddress || ""));
+
+          // --- Detalles opcionales (sólo si extraer email) ---
+          let websiteUri = "";
+          let gmapsUri = "";
+          if (includeEmail) {
+            try {
+              const detail = new Place({ id: p.id, requestedLanguage: language, region: "mx" });
+              await detail.fetchFields({ fields: ["websiteUri", "googleMapsUri"] });
+              websiteUri = detail.websiteUri || "";
+              gmapsUri   = detail.googleMapsUri || "";
+            } catch (_) { /* ignora errores de details para no frenar */ }
+          }
+
+          // Email best-effort (si se activó y tenemos sitio)
+          let email="";
+          if (includeEmail && websiteUri){
+            try { email = await tryExtractEmail(websiteUri, emailTimeout*1000); } catch(_) { email=""; }
+          }
+
+          const row = {
+            "KW": kw,
+            "Location": loc,
+            "Company Name": displayName,
+            "Category": p.primaryType || (p.types ? p.types.join("|") : ""),
+            "Website": websiteUri || "",
+            "Phone": phone,
+            "email": email,
+            "address": p.formattedAddress || "",
+            "Postal Code + City": (postal?postal+" ":"") + (city||""),
+            "state": state || "",
+            "pin code": postal || "",
+            "# Reviews": p.userRatingCount ?? "",
+            "Review": p.rating ?? "",
+            "CID": "", // sin details no tenemos CID fiable
+            "MapLink": gmapsUri || mapLinkFallback,
+            "Lat":  (p.location && (p.location.lat ?? p.location.latitude)) ?? "",
+            "Lng":  (p.location && (p.location.lng ?? p.location.longitude)) ?? ""
+          };
+          rows.push(row);
+
+          if (i % 5 === 0) renderBody();
+          setProgress( Math.min(100, Math.round((i/Math.max(1,places.length))*100)) );
+        }
+        renderBody();
+      }
+    }
+    setComboProgress(100);
+    log("Proceso finalizado.");
+  }
+
+  async function geocodeAddress(geocoder, address){
+    try{
+      const { results } = await geocoder.geocode({ address });
+      if (results && results[0]){
+        const { lat, lng } = results[0].geometry.location;
+        return { lat: lat(), lng: lng() };
+      }
+      return null;
+    }catch{ return null; }
+  }
+
+  async function tryExtractEmail(url, timeoutMs){
+    const ctrl = new AbortController();
+    const to = setTimeout(()=>ctrl.abort(), timeoutMs);
+    try{
+      const res = await fetch(url, { mode:"cors", signal: ctrl.signal });
+      const text = await res.text();
+      const m = text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
+      return m ? m[0] : "";
+    }catch{ return ""; } finally { clearTimeout(to); }
+  }
+
+  </script>
+</body>
+</html>
