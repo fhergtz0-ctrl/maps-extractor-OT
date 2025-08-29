@@ -10,115 +10,50 @@
 
   <style>
     :root{
-      --bg:#0b0b0b;
-      --panel:#151515;
-      --muted:#777;
-      --text:#eaeaea;
-      --accent:#22c55e;
-      --chip:#1f2937;
-      --chip-on:#0e4429;
-      --chip-txt:#c9d1d9;
-      --border:#262626;
-      --warn:#f59e0b;
-      --err:#ef4444;
+      --bg:#0b0b0b; --panel:#151515; --muted:#7b7b7b; --text:#eaeaea; --accent:#22c55e;
+      --chip:#1f2937; --chip-txt:#c9d1d9; --border:#262626; --warn:#f59e0b; --err:#ef4444;
     }
     *{ box-sizing:border-box }
-    html,body{
-      height:100%;
-      margin:0;
-      font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
-      color:var(--text);
-      background: var(--bg);
-    }
-    .container{
-      max-width: 1400px;
-      margin: 20px auto;
-      padding: 0 16px;
-    }
+    html,body{ height:100%; margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; color:var(--text); background:var(--bg); }
+    .container{ max-width:1400px; margin:20px auto; padding:0 16px; }
 
     /* Barra única horizontal */
     .toolbar{
-      display: grid;
-      grid-template-columns: 220px 280px 260px 110px 280px 1fr;
-      gap: 10px;
-      background: var(--panel);
-      border:1px solid var(--border);
-      border-radius:14px;
-      padding:12px;
-      align-items: start;
+      display:grid;
+      grid-template-columns:220px 280px 260px 140px 320px 1fr;
+      gap:10px; background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:12px; align-items:start;
     }
     .grp{ display:flex; flex-direction:column; gap:6px; }
     .lbl{ font-size:12px; color:var(--muted) }
     textarea, input[type="text"], input[type="number"]{
-      width:100%;
-      background:#0f0f0f;
-      color:var(--text);
-      border:1px solid var(--border);
-      border-radius:10px;
-      padding:10px;
-      resize:vertical;
+      width:100%; background:#0f0f0f; color:var(--text); border:1px solid var(--border); border-radius:10px; padding:10px; resize:vertical;
     }
     textarea{ height:64px }
-    .chips{
-      display:flex; flex-wrap:wrap; gap:8px;
-      background:#0f0f0f; border:1px solid var(--border); border-radius:12px; padding:10px;
-      min-height:64px;
-    }
-    .chip{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:8px 10px; background:var(--chip);
-      border:1px solid var(--border); border-radius:999px; font-size:12px; color:var(--chip-txt);
-    }
-    .chip input{ transform:translateY(1px) }
-    .actions{
-      display:flex; gap:8px; align-items:center; justify-content:flex-end;
-    }
-    button{
-      background:var(--accent); color:#08210e; border:0; border-radius:999px; padding:10px 14px;
-      font-weight:600; cursor:pointer;
-    }
-    .ghost{
-      background:#2a2a2a; color:#ddd;
-    }
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; background:#0f0f0f; border:1px solid var(--border); border-radius:12px; padding:10px; min-height:64px; }
+    .chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; background:var(--chip); border:1px solid var(--border); border-radius:999px; font-size:12px; color:var(--chip-txt); }
+    .actions{ display:flex; gap:8px; align-items:center; justify-content:flex-end; }
+    button{ background:var(--accent); color:#08210e; border:0; border-radius:999px; padding:10px 14px; font-weight:600; cursor:pointer; }
+    .ghost{ background:#2a2a2a; color:#ddd; }
 
-    /* Métricas + log */
-    .metrics{
-      display:flex; align-items:center; gap:16px; margin:10px 0 6px;
-      color:var(--muted);
-    }
+    .metrics{ display:flex; align-items:center; gap:16px; margin:10px 0 6px; color:var(--muted); }
     .bullet{ width:6px; height:6px; background:#334155; border-radius:999px; display:inline-block; margin:0 8px }
-    pre#log{
-      background:#0f0f0f; border:1px solid var(--border); border-radius:12px; padding:10px; white-space:pre-wrap; max-height:150px; overflow:auto;
-    }
 
-    /* Tabla resultados */
-    .table-wrap{
-      margin-top:12px; background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:8px;
-      overflow:auto;
-    }
-    table{ width:1800px; border-collapse:separate; border-spacing:0; }
-    thead th{
-      position:sticky; top:0; z-index:1;
-      background:#111; color:#cbd5e1; text-align:left; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border);
-    }
-    tbody td{
-      padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; font-size:14px;
-    }
+    pre#log{ background:#0f0f0f; border:1px solid var(--border); border-radius:12px; padding:10px; white-space:pre-wrap; max-height:150px; overflow:auto; }
+
+    .table-wrap{ margin-top:12px; background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:8px; overflow:auto; }
+    table{ width:2000px; border-collapse:separate; border-spacing:0; }
+    thead th{ position:sticky; top:0; z-index:1; background:#111; color:#cbd5e1; text-align:left; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border); }
+    tbody td{ padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; font-size:14px; }
     .muted{ color:var(--muted) }
-    .ok{ color:var(--accent) }
-    .warn{ color:var(--warn) }
-    .err{ color:var(--err) }
-    .count-badge{
-      display:inline-flex; align-items:center; justify-content:center;
-      width:28px; height:28px; border-radius:999px; background:#111; color:#a7f3d0; font-weight:700; border:1px solid var(--border);
-      margin-right:8px;
-    }
+    .count-badge{ display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:999px; background:#111; color:#a7f3d0; font-weight:700; border:1px solid var(--border); margin-right:8px; }
+    .subgrid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+    .disabled{ opacity:.5; pointer-events:none; }
   </style>
 </head>
 <body>
   <div class="container">
 
-    <!-- Barra única horizontal -->
+    <!-- Toolbar -->
     <div class="toolbar">
       <div class="grp">
         <div class="lbl">Keywords</div>
@@ -141,7 +76,7 @@
       </div>
 
       <div class="grp">
-        <div class="lbl">Radio (km)</div>
+        <div class="lbl">Radio por consulta (km)</div>
         <input id="radiusKm" type="number" min="1" max="50" value="5">
         <div class="lbl" style="margin-top:10px">Seg máx. email</div>
         <input id="maxEmailSec" type="number" min="5" max="30" value="10">
@@ -159,6 +94,20 @@
           <label class="chip"><input id="x-summary" type="checkbox">Resumen</label>
           <label class="chip"><input id="x-partners" type="checkbox">Reservas/Delivery</label>
         </div>
+        <div class="lbl" style="margin-top:8px">Más de 60 resultados (Grid 60+)</div>
+        <div class="chips">
+          <label class="chip"><input id="g-on" type="checkbox">Activar grid (costo ↑)</label>
+        </div>
+        <div class="subgrid" id="gridParams" class="disabled">
+          <div>
+            <div class="lbl">Paso grid (km)</div>
+            <input id="g-step" type="number" min="1" max="20" value="3">
+          </div>
+          <div>
+            <div class="lbl">Máx celdas</div>
+            <input id="g-max" type="number" min="1" max="200" value="60">
+          </div>
+        </div>
       </div>
 
       <div class="actions">
@@ -167,7 +116,7 @@
       </div>
     </div>
 
-    <!-- Métricas / estado -->
+    <!-- Métricas -->
     <div class="metrics">
       <span>👁️ Visitas: <span id="m-visits">—</span></span>
       <span class="bullet"></span>
@@ -186,29 +135,10 @@
       <table id="tbl">
         <thead>
           <tr>
-            <th>KW</th>
-            <th>Location</th>
-            <th>Company Name</th>
-            <th>Category</th>
-            <th>Website</th>
-            <th>Phone</th>
-            <th>email</th>
-            <th>address</th>
-            <th>Postal Code + City</th>
-            <th>state</th>
-            <th>pin code</th>
-            <th># Reviews</th>
-            <th>Review</th>
-            <th>CID</th>
-            <th>MapLink</th>
-            <th>Lat</th>
-            <th>Lng</th>
-            <th>Tipo + Subtipos</th>
-            <th>Precio</th>
-            <th>Horario</th>
-            <th>Resumen</th>
-            <th>Foto</th>
-            <th>Partners</th>
+            <th>KW</th><th>Location</th><th>Company Name</th><th>Category</th><th>Website</th><th>Phone</th><th>email</th>
+            <th>address</th><th>Postal Code + City</th><th>state</th><th>pin code</th><th># Reviews</th><th>Review</th>
+            <th>CID</th><th>MapLink</th><th>Lat</th><th>Lng</th><th>Tipo + Subtipos</th><th>Precio</th><th>Horario</th>
+            <th>Resumen</th><th>Foto</th><th>Partners</th>
           </tr>
         </thead>
         <tbody id="body"></tbody>
@@ -217,119 +147,59 @@
   </div>
 
   <script>
-    // ------------------ Utilidades UI ------------------
-    const $ = sel => document.querySelector(sel);
-    const log = (msg, kind="") => {
-      const el = $("#log");
-      el.textContent += (el.textContent ? "\n" : "") + msg;
-      el.scrollTop = el.scrollHeight;
-      console[(kind==="err"?"error":kind==="warn"?"warn":"log")](msg);
-    };
-    const setFound = n => $("#found").textContent = n;
+    const $ = s => document.querySelector(s);
+    const log = (m,k="")=>{ const el=$("#log"); el.textContent+=(el.textContent?"\n":"")+m; el.scrollTop=el.scrollHeight; console[(k==="err"?"error":k==="warn"?"warn":"log")](m); };
+    const setFound = n => $("#found").textContent=n;
 
-    // ------------------ Métricas (CountAPI + ipapi) ------------------
-    const METRIC_NS = location.host || "localdev";
-    async function countapiHit(key){
-      const url = `https://api.countapi.xyz/hit/${encodeURIComponent(METRIC_NS)}/${encodeURIComponent(key)}`;
-      try{ const r = await fetch(url,{mode:"cors"}); return r.ok ? r.json() : null; }catch{return null;}
+    // Métricas (CountAPI + ipapi)
+    const NS = location.host || "localdev";
+    const capi = (kind,key)=>fetch(`https://api.countapi.xyz/${kind}/${encodeURIComponent(NS)}/${encodeURIComponent(key)}`).then(r=>r.ok?r.json():null).catch(()=>null);
+    async function updateMetrics(){
+      const v = await capi("get","pageviews"); const r = await capi("get","runs");
+      $("#m-visits").textContent = v?.value ?? "—"; $("#m-runs").textContent = r?.value ?? "—";
+      try{ const ip = await fetch("https://ipapi.co/json/"); const j = await ip.json(); $("#m-country").textContent = `${j.country_name||j.country||"?"} (${j.country||"?"})`; }catch{ $("#m-country").textContent="—"; }
     }
-    async function countapiGet(key){
-      const url = `https://api.countapi.xyz/get/${encodeURIComponent(METRIC_NS)}/${encodeURIComponent(key)}`;
-      try{ const r = await fetch(url,{mode:"cors"}); return r.ok ? r.json() : null; }catch{return null;}
-    }
-    async function updateMetricsUI(){
-      const v = await countapiGet("pageviews");
-      const r = await countapiGet("runs");
-      $("#m-visits").textContent = v && v.value || "—";
-      $("#m-runs").textContent   = r && r.value || "—";
-      try{
-        const ip = await fetch("https://ipapi.co/json/"); 
-        const j = await ip.json();
-        $("#m-country").textContent = `${j.country_name || j.country || "?"} (${j.country || "?"})`;
-      }catch{ $("#m-country").textContent = "—"; }
-    }
-    updateMetricsUI();
-    // hit visitas al cargar
-    countapiHit("pageviews").then(updateMetricsUI);
+    updateMetrics(); capi("hit","pageviews").then(updateMetrics);
 
-    // ------------------ Toggles ------------------
+    // Toggles
     const toggles = {
-      latlng:   $("#t-latlng").checked,
-      website:  $("#t-website").checked,
-      email:    $("#t-email").checked,
-      hours:    $("#x-hours").checked,
-      price:    $("#x-price").checked,
-      maps:     $("#x-mapsuri").checked,
-      photo:    $("#x-photo").checked,
-      types:    $("#x-types").checked,
-      short:    $("#x-short").checked,
-      summary:  $("#x-summary").checked,
-      partners: $("#x-partners").checked
+      latlng: $("#t-latlng").checked, website: $("#t-website").checked, email: $("#t-email").checked,
+      hours: $("#x-hours").checked, price: $("#x-price").checked, maps: $("#x-mapsuri").checked, photo: $("#x-photo").checked,
+      types: $("#x-types").checked, short: $("#x-short").checked, summary: $("#x-summary").checked, partners: $("#x-partners").checked,
+      grid:  $("#g-on").checked
     };
-    for (const id of Object.keys(toggles)){
-      const el = {
-        latlng:   $("#t-latlng"),  website: $("#t-website"), email: $("#t-email"),
-        hours: $("#x-hours"), price: $("#x-price"), maps: $("#x-mapsuri"), photo: $("#x-photo"),
-        types: $("#x-types"), short: $("#x-short"), summary: $("#x-summary"), partners: $("#x-partners")
-      }[id];
-      el.addEventListener("change", ()=> toggles[id]=el.checked);
+    for (const [id] of Object.entries(toggles)){
+      const el = document.querySelector(`#${id.replace(/^t-|^x-|^g-/,'')}`) || document.querySelector(`#${id}`);
+    }
+    ["t-latlng","t-website","t-email","x-hours","x-price","x-mapsuri","x-photo","x-types","x-short","x-summary","x-partners","g-on"].forEach(id=>{
+      const map = { "t-latlng":"latlng","t-website":"website","t-email":"email","x-hours":"hours","x-price":"price","x-mapsuri":"maps","x-photo":"photo","x-types":"types","x-short":"short","x-summary":"summary","x-partners":"partners","g-on":"grid" };
+      const el = $("#"+id); el.addEventListener("change",()=>{ toggles[map[id]] = el.checked; refreshGridParams(); });
+    });
+    function refreshGridParams(){
+      const box = $("#gridParams");
+      if (toggles.grid){ box.classList.remove("disabled"); } else { box.classList.add("disabled"); }
+    }
+    refreshGridParams();
+
+    // CSV
+    const toCSV = rows => rows.map(r=>r.map(v=>v==null?"":(/[",\n]/.test(String(v))?`"${String(v).replace(/"/g,'""')}"`:v)).join(",")).join("\n");
+
+    async function tryExtractEmail(url,sec){
+      if (!url) return ""; let ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(), Math.max(3,sec)*1000);
+      try{ const r=await fetch(url,{mode:"cors",signal:ctrl.signal}); const h=await r.text();
+        const m=h.match(/mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/)||h.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/); return m?(m[1]||m[0]):""; }
+      catch{return ""} finally{ clearTimeout(t); }
+    }
+    function detectPartners(url){
+      if(!url) return ""; const L=["opentable","restorando","rappi","ubereats","didifood","corner.shop","quandoo","thefork","tripadvisor","just-eat","grubhub","doordash","menulog"];
+      const host=url.replace(/^https?:\/\//,""); return L.filter(s=>host.includes(s)).join("|");
     }
 
-    // ------------------ CSV Helper ------------------
-    function toCSV(rows){
-      const esc = v => {
-        if (v===null || v===undefined) return "";
-        const s = String(v);
-        return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
-      };
-      return rows.map(r => r.map(esc).join(",")).join("\n");
-    }
-
-    // ------------------ Buscar email básico (puede fallar CORS) ------------------
-    async function tryExtractEmail(website, timeoutSec){
-      if (!website) return "";
-      let ctrl = new AbortController();
-      const t = setTimeout(()=>ctrl.abort(), Math.max(3, timeoutSec)*1000);
-      try{
-        const r = await fetch(website, {mode:"cors", signal:ctrl.signal});
-        const html = await r.text();
-        // Busca mailto: o patrón simple
-        const m = html.match(/mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/) ||
-                  html.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-        return m ? (m[1]||m[0]) : "";
-      }catch{
-        return "";
-      }finally{ clearTimeout(t); }
-    }
-
-    // ------------------ Partners heurísticos ------------------
-    function detectPartners(website){
-      if (!website) return "";
-      const list = [
-        "opentable","restorando","rappi","ubereats","didifood","corner.shop","ordermytable",
-        "quandoo","tripadvisor","thefork","just-eat","grubhub","doorDash","menulog"
-      ];
-      const host = website.replace(/^https?:\/\//,"");
-      const found = list.filter(s => host.includes(s));
-      return found.join("|");
-    }
-
-    // ------------------ FieldMask para SearchText (sin places.subtypes) ------------------
     function buildFieldMask(){
       const fm = [
-        "places.id",
-        "places.displayName",
-        "places.primaryType",
-        "places.types",
-        "places.formattedAddress",
-        "places.addressComponents",
-        "places.location",
-        "places.plusCode",
-        "places.businessStatus",
-        "places.nationalPhoneNumber",
-        "places.internationalPhoneNumber",
-        "places.rating",
-        "places.userRatingCount"
+        "places.id","places.displayName","places.primaryType","places.types","places.formattedAddress","places.addressComponents",
+        "places.location","places.plusCode","places.businessStatus","places.nationalPhoneNumber","places.internationalPhoneNumber",
+        "places.rating","places.userRatingCount"
       ];
       if (toggles.short)   fm.push("places.shortFormattedAddress");
       if (toggles.price)   fm.push("places.priceLevel");
@@ -342,188 +212,151 @@
       return fm.join(",");
     }
 
-    // ------------------ Geocodificar texto -> {lat,lng} ------------------
-    async function geocodeText(address, key){
-      const u = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${encodeURIComponent(key)}`;
-      const r = await fetch(u);
-      const j = await r.json();
-      if (j.status === "OK" && j.results && j.results[0]){
-        const c = j.results[0].geometry.location;
-        return {lat:c.lat, lng:c.lng};
-      }
+    // Geocoding
+    async function geocodeText(address,key){
+      const u=`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${encodeURIComponent(key)}`;
+      const r=await fetch(u); const j=await r.json();
+      if(j.status==="OK"&&j.results?.[0]){ const g=j.results[0].geometry; return { center:g.location, viewport:g.viewport||null }; }
       return null;
     }
 
-    // ------------------ Buscar por SearchText v1 con paginación ------------------
-    async function textSearchAll({query, center, radiusM, key, lang="es", region="MX"}){
-      const all = [];
-      let pageToken = undefined;
-      const endpoint = `https://places.googleapis.com/v1/places:searchText?key=${encodeURIComponent(key)}`;
-      const fields   = buildFieldMask();
-
+    // Places SearchText con paginación
+    async function textSearchAll({query,center,radiusM,key,lang="es",region="MX"}){
+      const all=[]; let token; const endpoint=`https://places.googleapis.com/v1/places:searchText?key=${encodeURIComponent(key)}`;
+      const fields=buildFieldMask();
       do{
-        const body = {
-          textQuery: query,
-          languageCode: lang,
-          regionCode: region,
-          rankPreference: "RELEVANCE",
-          maxResultCount: 20,
-          pageToken
-        };
-        if (center && radiusM){
-          body.locationBias = {
-            circle: {
-              center: {latitude:center.lat, longitude:center.lng},
-              radius: radiusM
-            }
-          };
-        }
-
-        const r = await fetch(endpoint, {
-          method:"POST",
-          headers:{
-            "Content-Type":"application/json",
-            "X-Goog-FieldMask": fields
-          },
-          body: JSON.stringify(body)
-        });
-
-        if (!r.ok){
-          const err = await r.json().catch(()=>({}));
-          throw {status:r.status, data:err};
-        }
-        const j = await r.json();
-        if (j.places && j.places.length) all.push(...j.places);
-        pageToken = j.nextPageToken || undefined;
-      } while(pageToken);
-
+        const body={ textQuery:query, languageCode:lang, regionCode:region, rankPreference:"RELEVANCE", maxResultCount:20, pageToken:token };
+        if(center&&radiusM){ body.locationBias={ circle:{ center:{latitude:center.lat, longitude:center.lng}, radius:radiusM } }; }
+        const r=await fetch(endpoint,{ method:"POST", headers:{ "Content-Type":"application/json","X-Goog-FieldMask":fields }, body:JSON.stringify(body) });
+        if(!r.ok){ const e=await r.json().catch(()=>({})); throw {status:r.status,data:e}; }
+        const j=await r.json(); if(j.places?.length) all.push(...j.places); token=j.nextPageToken||undefined;
+      }while(token);
       return all;
     }
 
-    // ------------------ Render tabla ------------------
+    // Utilidad: km -> grados
+    const kmToLat = km => km/110.574;
+    const kmToLng = (km,lat) => km/(111.320*Math.cos(lat*Math.PI/180));
+
+    // Genera centros para Grid usando viewport o una caja alrededor del centro
+    function buildGridCenters({center, viewport, stepKm, maxCells}){
+      const pts=[];
+      // Definimos bounds
+      let sw, ne;
+      if (viewport && viewport.southwest && viewport.northeast){
+        sw = {lat: viewport.southwest.lat, lng: viewport.southwest.lng};
+        ne = {lat: viewport.northeast.lat, lng: viewport.northeast.lng};
+      } else {
+        // Caja de 2 * paso alrededor del centro si no hay viewport
+        const dLat = kmToLat(stepKm*2);
+        const dLng = kmToLng(stepKm*2, center.lat);
+        sw = {lat:center.lat-dLat, lng:center.lng-dLng};
+        ne = {lat:center.lat+dLat, lng:center.lng+dLng};
+      }
+
+      const latStep = kmToLat(stepKm);
+      for(let lat=sw.lat; lat<=ne.lat; lat+=latStep){
+        const lngStep = kmToLng(stepKm, lat||center.lat);
+        for(let lng=sw.lng; lng<=ne.lng; lng+=lngStep){
+          pts.push({lat, lng});
+          if(pts.length>=maxCells) return pts;
+        }
+      }
+      return pts;
+    }
+
     function renderRows(rows){
-      const tbody = $("#body");
-      tbody.innerHTML = "";
-      for (const r of rows){
-        const tr = document.createElement("tr");
+      const tb=$("#body"); tb.innerHTML="";
+      for(const r of rows){
+        const tr=document.createElement("tr");
         r.forEach((v,i)=>{
-          const td = document.createElement("td");
-          td.textContent = v==null ? "" : String(v);
-          // Make links clickable on MapLink & Website
-          if (i===14 || i===4){
-            if (v){
-              td.innerHTML = `<a href="${v}" target="_blank" rel="noopener">${v}</a>`;
-            }
-          }
-          tbody.appendChild(tr).appendChild(td);
+          const td=document.createElement("td");
+          if(i===14||i===4){ td.innerHTML = v?`<a href="${v}" target="_blank" rel="noopener">${v}</a>`:""; }
+          else td.textContent = v==null ? "" : String(v);
+          tr.appendChild(td);
         });
+        tb.appendChild(tr);
       }
       setFound(rows.length);
     }
 
-    // ------------------ Descargar CSV ------------------
-    function downloadCSV(rows, name="results.csv"){
-      const head = [
-        "KW","Location","Company Name","Category","Website","Phone","email","address",
-        "Postal Code + City","state","pin code","# Reviews","Review","CID","MapLink",
-        "Lat","Lng","Tipo + Subtipos","Precio","Horario","Resumen","Foto","Partners"
-      ];
-      const csv = toCSV([head, ...rows]);
-      const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = name; a.click();
-      URL.revokeObjectURL(url);
+    function downloadCSV(rows,name="results.csv"){
+      const head=["KW","Location","Company Name","Category","Website","Phone","email","address","Postal Code + City","state","pin code","# Reviews","Review","CID","MapLink","Lat","Lng","Tipo + Subtipos","Precio","Horario","Resumen","Foto","Partners"];
+      const csv=toCSV([head,...rows]); const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}); const url=URL.createObjectURL(blob); const a=document.createElement("a");
+      a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);
     }
 
-    // ------------------ START ------------------
+    // START
     $("#start").addEventListener("click", async ()=>{
-      const key = $("#apiKey").value.trim();
-      if (!key){ alert("Pega tu API Key"); return; }
+      const key=$("#apiKey").value.trim(); if(!key){ alert("Pega tu API Key"); return; }
+      $("#body").innerHTML=""; setFound(0); $("#log").textContent="Iniciando…";
+      capi("hit","runs").then(updateMetrics);
 
-      $("#body").innerHTML = "";
-      setFound(0);
-      $("#log").textContent = "Iniciando…";
+      const kws=$("#kw").value.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
+      const locs=$("#locs").value.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
+      const rKm=Math.max(1,parseInt($("#radiusKm").value||"5",10)); const rM=rKm*1000;
+      const rows=[]; const seen=new Set(); let comb=0;
 
-      // Métrica: run
-      countapiHit("runs").then(updateMetricsUI);
+      const gridOn = $("#g-on").checked;
+      const stepKm = Math.max(1, parseInt($("#g-step").value||"3",10));
+      const maxCells = Math.max(1, parseInt($("#g-max").value||"60",10));
 
-      const kws   = $("#kw").value.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
-      const locs  = $("#locs").value.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
-      const rKm   = Math.max(1, parseInt($("#radiusKm").value||"5",10));
-      const rM    = rKm*1000;
-      const rows  = [];
+      for(const loc of locs){
+        const g = await geocodeText(loc, key);
+        if(!g){ log(`No se pudo geocodificar: ${loc}`,"warn"); continue; }
+        const baseCenter = {lat:g.center.lat, lng:g.center.lng};
 
-      let comb = 0;
-      for (const loc of locs){
-        const center = await geocodeText(loc, key);
-        if (!center){ log(`No se pudo geocodificar: ${loc}`, "warn"); continue; }
+        // Generamos centros: solo 1 (sin grid) o muchos (con grid)
+        const centers = gridOn ? buildGridCenters({center:baseCenter, viewport:g.viewport, stepKm, maxCells}) : [baseCenter];
+        log(`Ubicación "${loc}": centros a consultar = ${centers.length}${gridOn?" (grid activo)":""}`);
 
-        for (const kw of kws){
-          comb++;
-          log(`[${comb}] ${kw} @ ${loc} (radio ${rKm} km)`);
+        for(const kw of kws){
+          let idx=0;
+          for(const c of centers){
+            comb++; idx++;
+            log(`[${comb}] ${kw} @ ${loc} — centro ${idx}/${centers.length} (radio ${rKm} km)`);
+            try{
+              const places = await textSearchAll({query:`${kw}`, center:c, radiusM:rM, key});
+              for(const p of places){
+                if (seen.has(p.id)) continue;
+                seen.add(p.id);
 
-          try{
-            const places = await textSearchAll({query:`${kw}`, center, radiusM:rM, key});
-            for (const p of places){
-              const name = p.displayName?.text || "";
-              const cat  = p.primaryType || "";
-              const addr = p.formattedAddress || "";
-              const phone = p.nationalPhoneNumber || p.internationalPhoneNumber || "";
-              const rating = p.rating || "";
-              const count  = p.userRatingCount || "";
-              const guri   = p.googleMapsUri || "";
-              const lat = p.location?.latitude || "";
-              const lng = p.location?.longitude || "";
-              const types = Array.isArray(p.types) ? p.types : [];
-              const primary = p.primaryType || "";
-              const subTypes = toggles.types ? types.filter(t=>t!==primary).join("|") : "";
-              const price = p.priceLevel!=null ? String(p.priceLevel) : "";
-
-              // versiones extra segun toggles
-              const shortAddr = p.shortFormattedAddress || "";
-              const hoursText = p.currentOpeningHours?.weekdayDescriptions?.join(" | ") || (p.currentOpeningHours?.openNow!=null ? (p.currentOpeningHours.openNow?"abierto":"cerrado") : "");
-              const summary = p.editorialSummary?.text || "";
-              let website = ""; // SearchText no siempre lo trae; lo derivamos desde MapsURI si es posible (mejor llamar Place Details, pero nos quedamos en SearchText)
-              if (toggles.website && p.googleMapsUri){
-                website = ""; // placeholder: si quieres asegurar website, usa Place Details v1 (no lo invocamos aquí para mantener simple).
+                const name=p.displayName?.text||"", cat=p.primaryType||"", addr=p.formattedAddress||"";
+                const phone=p.nationalPhoneNumber||p.internationalPhoneNumber||"";
+                const rating=p.rating||"", count=p.userRatingCount||"", guri=p.googleMapsUri||"";
+                const lat=p.location?.latitude||"", lng=p.location?.longitude||"";
+                const types=Array.isArray(p.types)?p.types:[]; const primary=p.primaryType||"";
+                const subTypes=toggles.types?types.filter(t=>t!==primary).join("|"):"";
+                const price=p.priceLevel!=null?String(p.priceLevel):"";
+                const shortAddr=p.shortFormattedAddress||"";
+                const hours=p.currentOpeningHours?.weekdayDescriptions?.join(" | ")||(p.currentOpeningHours?.openNow!=null?(p.currentOpeningHours.openNow?"abierto":"cerrado"):"");
+                const summary=p.editorialSummary?.text||"";
+                let website=""; // Para website real, habría que hacer Place Details con p.id (opcional a futuro)
+                let email=""; if(toggles.email){ email = await tryExtractEmail(website, parseInt($("#maxEmailSec").value||"10",10)); }
+                const partners=toggles.partners?detectPartners(website):"";
+                rows.push([ kw, loc, name, cat, website, phone, email, addr, "", "", "", count, rating, p.id||"", guri, lat, lng,
+                  (toggles.types?((p.primaryTypeDisplayName||primary)+(subTypes?` | ${subTypes}`:"")):""),
+                  (toggles.price?price:""),
+                  (toggles.hours?hours:""),
+                  (toggles.summary?summary:""),
+                  (toggles.photo && p.photos && p.photos[0]?.name ? p.photos[0].name : ""),
+                  partners
+                ]);
               }
-
-              // email (best-effort)
-              let email = "";
-              if (toggles.email){
-                email = await tryExtractEmail(website, parseInt($("#maxEmailSec").value||"10",10));
-              }
-
-              const partners = toggles.partners ? detectPartners(website) : "";
-
-              rows.push([
-                kw, loc, name, cat, website, phone, email, addr,
-                "", "", "", count, rating, p.id||"", guri,
-                lat, lng, (toggles.types ? ( (p.primaryTypeDisplayName||primary) + (subTypes?` | ${subTypes}`:"") ) : ""),
-                (toggles.price?price:""),
-                (toggles.hours?hoursText:""),
-                (toggles.summary?summary:""),
-                (toggles.photo && p.photos && p.photos[0]?.name ? p.photos[0].name : ""),
-                partners
-              ]);
+            }catch(e){
+              log(`Error "${kw}" @ "${loc}" (centro ${idx}): HTTP ${e.status||"?"} → ${JSON.stringify(e.data||e)}`,"err");
             }
-          }catch(e){
-            log(`Error "${kw}" @ "${loc}": HTTP ${e.status||"?"} en searchText: ${JSON.stringify(e.data||e)}`, "err");
           }
         }
       }
-
       renderRows(rows);
-      log("Proceso finalizado.");
+      log(`Proceso finalizado. Lugares únicos: ${rows.length}.`);
+      if (gridOn) log("Nota: Grid 60+ multiplica consultas. Revisa tu cuota/uso en Google Cloud.","warn");
     });
 
     $("#download").addEventListener("click", ()=>{
-      const trows = [...document.querySelectorAll("#body tr")];
-      if (!trows.length){ alert("No hay datos para descargar."); return; }
-      // reconstruimos desde la tabla
-      const rows = trows.map(tr => [...tr.children].map(td => td.textContent));
-      downloadCSV(rows);
+      const trs=[...document.querySelectorAll("#body tr")]; if(!trs.length){ alert("No hay datos para descargar."); return; }
+      const rows=trs.map(tr=>[...tr.children].map(td=>td.textContent)); downloadCSV(rows);
     });
   </script>
 </body>
