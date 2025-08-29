@@ -2,24 +2,44 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>Scrapping Tool — Encabezados estilo hoja</title>
+  <title>Scrapping Tool — Google Places</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- CSS -->
-  <link rel="stylesheet" href="./assets/css/scrapping-tool.css?v=5">
-  <link rel="stylesheet" href="./assets/css/utilities.css?v=5">
-  <link rel="stylesheet" href="./assets/css/print.css?v=5" media="print">
+  <!-- CSS propios -->
+  <link rel="stylesheet" href="./assets/css/scrapping-tool.css?v=6">
+  <link rel="stylesheet" href="./assets/css/utilities.css?v=6">
+  <link rel="stylesheet" href="./assets/css/print.css?v=6" media="print">
+  <!-- Ajustes para anchos y resizer -->
+  <style>
+    /* La tabla usa anchos fijos definidos por <colgroup> */
+    #table { table-layout: fixed; width: 100%; }
+    #table th, #table td {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    /* Handler para redimensionar columnas */
+    #thead th { position: relative; }
+    .col-resizer {
+      position: absolute; top: 0; right: 0; bottom: 0;
+      width: 6px; cursor: col-resize; user-select: none;
+    }
+    .col-resizer:hover { background: rgba(255,255,255,.06); }
+  </style>
 </head>
 <body>
-  <!-- ======== App ======== -->
   <div class="app">
     <aside>
       <h1>Scrapping Tool</h1>
       <p class="hint" style="margin-bottom:12px">Google Maps — <b>Places API (New)</b> + Maps JS</p>
 
-      <!-- Tarjeta de estado -->
-      <div class="pill" id="statusPill"><span class="dot"></span><span id="statusText">“Keyword in Ubicación”</span></div>
-      <p style="margin:10px 0 6px; font-weight:700">Progress <span id="comboProgress">(0/0)</span></p>
-      <div class="progress" aria-label="progreso combinaciones"><div id="comboBar"></div></div>
+      <div class="pill" id="statusPill"><span class="dot"></span>
+        <span id="statusText">“Keyword in Ubicación”</span>
+      </div>
+
+      <p style="margin:10px 0 6px; font-weight:700">
+        Progress <span id="comboProgress">(0/0)</span>
+      </p>
+      <div class="progress" aria-label="progreso combinaciones">
+        <div id="comboBar"></div>
+      </div>
 
       <label style="margin-top:14px">API Key</label>
       <input id="apiKey" placeholder="pegar aqui la Key"/>
@@ -39,19 +59,23 @@ Nogales Sonora</textarea>
     </aside>
 
     <main>
-      <!-- Toolbar superior -->
       <div class="toolbar">
         <div style="display:flex; align-items:center; gap:10px; min-width:260px">
           <div class="badge"><span id="count">0</span></div>
           <div>
-            <div style="font-weight:700; font-size:12px; opacity:.85">RESULTADOS ENCONTRADOS</div>
-            <div class="progress" aria-label="progreso resultados"><div id="bar"></div></div>
+            <div style="font-weight:700; font-size:12px; opacity:.85">
+              RESULTADOS ENCONTRADOS
+            </div>
+            <div class="progress" aria-label="progreso resultados">
+              <div id="bar"></div>
+            </div>
           </div>
         </div>
 
         <button class="btn" id="clear">Limpiar Datos</button>
 
-        <label class="checkpill"><input type="checkbox" id="includeLatLng" checked /> Extraer Lat & Long</label>
+        <!-- Lat/Lng siempre visibles (dejo el switch deshabilitado para claridad) -->
+        <label class="checkpill"><input type="checkbox" id="includeLatLng" checked disabled /> Extraer Lat & Long</label>
         <label class="checkpill"><input type="checkbox" id="extractEmail" /> Extraer Email</label>
 
         <button class="btn" id="export">Descargar</button>
@@ -60,12 +84,12 @@ Nogales Sonora</textarea>
         <button class="btn primary" id="start">Iniciar extracción</button>
       </div>
 
-      <!-- Resultados -->
       <div class="panel">
         <div id="log"></div>
         <div style="height:12px"></div>
         <div style="overflow:auto; max-height:62vh; border:1px solid var(--border); border-radius:10px">
           <table id="table">
+            <!-- colgroup se inserta dinámicamente -->
             <thead id="thead"></thead>
             <tbody id="tbody"></tbody>
           </table>
@@ -77,26 +101,34 @@ Nogales Sonora</textarea>
   <script>
   "use strict";
 
-  // ===== UTILIDAD =====
-  const $ = (s, r=document)=>r.querySelector(s);
+  // =================== Utilidades básicas ===================
+  const $  = (s, r=document)=>r.querySelector(s);
   const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
   $("#origin").textContent = location.origin;
 
-  // Persistencia simple de API Key
   const apiKey = $("#apiKey");
   apiKey.value = localStorage.getItem('st_api_key') || "";
   apiKey.addEventListener('change', () => localStorage.setItem('st_api_key', apiKey.value));
 
-  // Encabezados base + Lat/Lng
+  // Encabezados base (Lat/Lng SIEMPRE visibles)
   const headersWantedBase = [
     "KW","Location","Company Name","Category","Website","Phone","email","address",
     "Postal Code + City","state","pin code","# Reviews","Review","CID","MapLink",
     "Lat","Lng"
   ];
 
+  // Anchos iniciales por columna (px) — ajusta a tu gusto
+  const COL_WIDTHS = {
+    "KW": 120, "Location": 140, "Company Name": 220, "Category": 130,
+    "Website": 180, "Phone": 120, "email": 220, "address": 340,
+    "Postal Code + City": 160, "state": 120, "pin code": 100,
+    "# Reviews": 110, "Review": 90, "CID": 150, "MapLink": 260,
+    "Lat": 120, "Lng": 120
+  };
+
   let rows = [];
-  let includeLatLng = true;
-  let includeEmail = false;
+  let includeEmail = false;                // toggle real
+  let isRunning = false;                   // anti doble-clic
 
   function toStr(v){ return v==null ? "" : String(v); }
   function escCSV(v){ return '"' + toStr(v).replace(/"/g,'""') + '"'; }
@@ -106,14 +138,16 @@ Nogales Sonora</textarea>
     const lines = [cols.map(escCSV).join(",")];
     for(const r of data) lines.push(cols.map(h=>escCSV(r[h])).join(","));
     const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8;"});
-    const url = URL.createObjectURL(blob); const a=document.createElement("a");
-    a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    const url = URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
   }
   function log(m){ const el=$("#log"); el.textContent = (el.textContent?el.textContent+"\n":"")+m; console.log("[ScrappingTool]",m); }
   function setProgress(p){ $("#bar").style.width = Math.max(0,Math.min(100,p)) + "%"; }
   function setComboProgress(p){ $("#comboBar").style.width = Math.max(0,Math.min(100,p)) + "%"; }
 
-  // Helpers UI
+  // Contadores de combos
   function updateCounters(){
     const k = $("#keywords").value.split("\n").map(s=>s.trim()).filter(Boolean).length;
     const l = $("#locations").value.split("\n").map(s=>s.trim()).filter(Boolean).length;
@@ -124,33 +158,99 @@ Nogales Sonora</textarea>
   $("#locations").addEventListener("input", updateCounters);
   updateCounters();
 
-  // Tabla
+  // Columnas visibles
   function currentHeaders(){
     const h = [...headersWantedBase];
     if (!includeEmail) {
       const i = h.indexOf("email"); if (i > -1) h.splice(i, 1);
     }
-    if (!includeLatLng) {
-      ["Lat","Lng"].forEach(col=>{
-        const i = h.indexOf(col); if (i > -1) h.splice(i,1);
-      });
-    }
     return h;
   }
+
+  // ----- Construcción dinámica de <colgroup> con anchos -----
+  function renderColGroup(){
+    const table = document.getElementById("table");
+    let colgroup = table.querySelector("colgroup");
+    if (colgroup) colgroup.remove();
+    colgroup = document.createElement("colgroup");
+    currentHeaders().forEach(h=>{
+      const col = document.createElement("col");
+      col.style.width = (COL_WIDTHS[h] || 160) + "px";
+      colgroup.appendChild(col);
+    });
+    table.insertBefore(colgroup, table.firstChild);
+  }
+
+  // ----- Resizer de columnas (drag sobre el header) -----
+  function makeHeadersResizable(){
+    const table = document.getElementById("table");
+    const colgroup = table.querySelector("colgroup");
+    const cols = colgroup ? Array.from(colgroup.children) : [];
+    const ths = Array.from(document.querySelectorAll("#thead tr:first-child th"));
+
+    ths.forEach((th, i)=>{
+      let grip = th.querySelector(".col-resizer");
+      if (!grip) {
+        grip = document.createElement("span");
+        grip.className = "col-resizer";
+        th.appendChild(grip);
+      } else {
+        // Evita duplicar listeners recreando el nodo
+        const clone = grip.cloneNode(true);
+        grip.replaceWith(clone);
+        grip = clone;
+      }
+
+      grip.addEventListener("mousedown", (ev)=>{
+        ev.preventDefault();
+        const startX = ev.pageX;
+        const startW = parseInt((cols[i].style.width || th.offsetWidth) + "", 10) || th.offsetWidth;
+
+        function onMove(e){
+          const delta = e.pageX - startX;
+          const newW = Math.max(60, startW + delta);
+          cols[i].style.width = newW + "px";
+          // Persistimos el ancho en el mapa (opcional)
+          const head = currentHeaders()[i];
+          if (head) COL_WIDTHS[head] = newW;
+        }
+        function onUp(){
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+        }
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      });
+    });
+  }
+
+  // Tabla (header + filtros)
   function renderHeader(){
+    renderColGroup(); // crea/actualiza anchos antes de dibujar header
+
     const thead=$("#thead"); thead.innerHTML="";
     const tr1=document.createElement("tr"), tr2=document.createElement("tr");
     currentHeaders().forEach(h=>{
-      const th=document.createElement("th"); th.textContent=h; tr1.appendChild(th);
+      const th=document.createElement("th"); th.textContent=h;
+      tr1.appendChild(th);
+
       const th2=document.createElement("th");
-      const inp=document.createElement("input"); inp.placeholder="filtrar…"; inp.dataset.col=h; inp.addEventListener("input",renderBody);
-      th2.appendChild(inp); tr2.appendChild(th2);
+      const inp=document.createElement("input");
+      inp.placeholder="filtrar…"; inp.dataset.col=h;
+      inp.addEventListener("input",renderBody);
+      th2.appendChild(inp);
+      tr2.appendChild(th2);
     });
     thead.appendChild(tr1); thead.appendChild(tr2);
+
+    makeHeadersResizable(); // activa drag
   }
+
   function renderBody(){
     const tbody=$("#tbody"); tbody.innerHTML="";
-    const filters={}; $$("#thead input").forEach(i=>{ const v=i.value.trim().toLowerCase(); if(v) filters[i.dataset.col]=v; });
+    const filters={}; $$("#thead input").forEach(i=>{
+      const v=i.value.trim().toLowerCase(); if(v) filters[i.dataset.col]=v;
+    });
     const cols = currentHeaders();
     const data = rows.map(r=>{
       const pruned={}; cols.forEach(c=>pruned[c]=r[c]??""); return pruned;
@@ -165,7 +265,11 @@ Nogales Sonora</textarea>
     $("#count").textContent = data.length;
   }
 
-  $("#clear").addEventListener("click",()=>{ rows=[]; $("#log").textContent=""; $("#count").textContent="0"; setProgress(0); setComboProgress(0); renderBody(); });
+  // Acciones UI
+  $("#clear").addEventListener("click",()=>{
+    rows=[]; $("#log").textContent=""; $("#count").textContent="0";
+    setProgress(0); setComboProgress(0); renderBody();
+  });
   $("#export").addEventListener("click",()=> downloadCSV("resultados-scrapping.csv", rows));
   $("#globalSearch").addEventListener("input", e=>{
     const term=e.target.value.trim().toLowerCase(); $$("#thead input").forEach(i=>i.value="");
@@ -179,19 +283,18 @@ Nogales Sonora</textarea>
     }
     $("#count").textContent=data.length;
   });
-
-  $("#includeLatLng").addEventListener("change", e=>{ includeLatLng=e.target.checked; renderHeader(); renderBody(); });
-  $("#extractEmail").addEventListener("change", e=>{ includeEmail=e.target.checked; renderHeader(); renderBody(); });
+  $("#extractEmail").addEventListener("change", e=>{
+    includeEmail = e.target.checked; renderHeader(); renderBody();
+  });
 
   renderHeader(); renderBody();
 
-  // ===== REST Places Text Search (todas las páginas) =====
+  // ============ REST: places:searchText (paginado) ============
   async function textSearchAll({ apiKey, textQuery, center, radius = 5000, language = "es" }) {
     const url = "https://places.googleapis.com/v1/places:searchText";
     const headers = {
       "Content-Type": "application/json",
       "X-Goog-Api-Key": apiKey,
-      // FieldMask: solo lo necesario (coste y rendimiento)
       "X-Goog-FieldMask": [
         "places.id",
         "places.displayName",
@@ -214,16 +317,10 @@ Nogales Sonora</textarea>
       const body = {
         textQuery,
         languageCode: language,
-        locationBias: {
-          circle: {
-            center: { latitude: center.lat, longitude: center.lng },
-            radius
-          }
-        },
+        locationBias: { circle: { center: { latitude: center.lat, longitude: center.lng }, radius } },
         pageSize: 20,
         pageToken
       };
-
       const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
       if (!res.ok) {
         const t = await res.text().catch(()=>String(res.status));
@@ -232,140 +329,13 @@ Nogales Sonora</textarea>
       const data = await res.json();
       results.push(...(data.places || []));
       pageToken = data.nextPageToken || null;
-      // Respetuoso: pequeña pausa entre páginas
-      if (pageToken) await new Promise(r=>setTimeout(r, 300));
+      if (pageToken) await new Promise(r=>setTimeout(r, 300)); // pausa corta
     } while (pageToken);
 
     return results;
   }
 
-  // ===== EXTRACCIÓN (lote: keywords x ubicaciones) =====
-  $("#start").addEventListener("click", start);
-
-  async function start(){
-    const key=$("#apiKey").value.trim(); if(!key) return alert("Coloca tu API key.");
-    // Cargar Maps JS si no está (para Geocoding y Details opcional)
-    if(!window.google || !google.maps || !google.maps.importLibrary){
-      const s=document.createElement("script");
-      s.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(key)+"&v=quarterly";
-      s.async=true; s.defer=true; s.onerror=()=>log("No se pudo cargar Google Maps JS API.");
-      document.body.appendChild(s);
-      await new Promise(res=> s.onload=res);
-    }
-
-    const keywords = $("#keywords").value.split("\n").map(t=>t.trim()).filter(Boolean);
-    const locations = $("#locations").value.split("\n").map(t=>t.trim()).filter(Boolean);
-    if (!keywords.length || !locations.length) return alert("Agrega al menos 1 keyword y 1 ubicación.");
-
-    const emailTimeout = Math.max(1, Math.min(20, parseInt($("#emailTimeout").value,10) || 10));
-    const language="es";
-
-    rows=[]; renderBody(); setProgress(0); setComboProgress(0);
-    const totalCombos = keywords.length * locations.length;
-    $("#comboProgress").textContent = `(0/${totalCombos})`;
-
-    const { Map }   = await google.maps.importLibrary("maps");
-    const { Place } = await google.maps.importLibrary("places");
-    const geocoder = new google.maps.Geocoder();
-
-    let comboIndex = 0;
-    for (const kw of keywords){
-      for (const loc of locations){
-        comboIndex++;
-        $("#statusText").textContent = `"${kw}" in "${loc}"`;
-        $("#comboProgress").textContent = `(${comboIndex}/${totalCombos})`;
-        setComboProgress( Math.round((comboIndex-1)/totalCombos*100) );
-
-        const center = await geocodeAddress(geocoder, loc);
-        if (!center){ log(`No se pudo geocodificar: ${loc}`); continue; }
-
-        // Paginamos por REST (más de 20)
-        let places = [];
-        try {
-          places = await textSearchAll({ apiKey: key, textQuery: kw, center, radius: 5000, language });
-        } catch (err) {
-          log(`Error en "${kw}" @ "${loc}": ${err && err.message ? err.message : err}`);
-          continue;
-        }
-
-        log(`(${comboIndex}/${totalCombos}) ${kw} @ ${loc}: ${places.length} resultados`);
-        let i=0;
-
-        for (const p of places){
-          i++;
-
-          // Normalizar displayName (REST devuelve objeto)
-          const displayName = (typeof p.displayName === "string") ? p.displayName
-                              : (p.displayName && p.displayName.text) ? p.displayName.text
-                              : "";
-
-          // Address components -> city/state/postal
-          let city="", state="", postal="";
-          if(Array.isArray(p.addressComponents)){
-            for(const c of p.addressComponents){
-              const t=c.types||[];
-              const longTxt=c.longText||c.long_name||c.name||"";
-              if(t.includes("locality")||t.includes("sublocality")||t.includes("postal_town")) city=city||longTxt;
-              if(t.includes("administrative_area_level_1")) state=state||longTxt;
-              if(t.includes("postal_code")) postal=postal||longTxt;
-            }
-          }
-
-          const phone = p.nationalPhoneNumber || p.internationalPhoneNumber || "";
-
-          // Fallback de MapLink (sin details)
-          const mapLinkFallback = "https://www.google.com/maps/search/?api=1&query=" +
-            encodeURIComponent((displayName || "") + " " + (p.formattedAddress || ""));
-
-          // --- Detalles opcionales (sólo si extraer email) ---
-          let websiteUri = "";
-          let gmapsUri = "";
-          if (includeEmail) {
-            try {
-              const detail = new Place({ id: p.id, requestedLanguage: language, region: "mx" });
-              await detail.fetchFields({ fields: ["websiteUri", "googleMapsUri"] });
-              websiteUri = detail.websiteUri || "";
-              gmapsUri   = detail.googleMapsUri || "";
-            } catch (_) { /* ignora errores de details para no frenar */ }
-          }
-
-          // Email best-effort (si se activó y tenemos sitio)
-          let email="";
-          if (includeEmail && websiteUri){
-            try { email = await tryExtractEmail(websiteUri, emailTimeout*1000); } catch(_) { email=""; }
-          }
-
-          const row = {
-            "KW": kw,
-            "Location": loc,
-            "Company Name": displayName,
-            "Category": p.primaryType || (p.types ? p.types.join("|") : ""),
-            "Website": websiteUri || "",
-            "Phone": phone,
-            "email": email,
-            "address": p.formattedAddress || "",
-            "Postal Code + City": (postal?postal+" ":"") + (city||""),
-            "state": state || "",
-            "pin code": postal || "",
-            "# Reviews": p.userRatingCount ?? "",
-            "Review": p.rating ?? "",
-            "CID": "", // sin details no tenemos CID fiable
-            "MapLink": gmapsUri || mapLinkFallback,
-            "Lat":  (p.location && (p.location.lat ?? p.location.latitude)) ?? "",
-            "Lng":  (p.location && (p.location.lng ?? p.location.longitude)) ?? ""
-          };
-          rows.push(row);
-
-          if (i % 5 === 0) renderBody();
-          setProgress( Math.min(100, Math.round((i/Math.max(1,places.length))*100)) );
-        }
-        renderBody();
-      }
-    }
-    setComboProgress(100);
-    log("Proceso finalizado.");
-  }
-
+  // ============ Geocoder + Details (opcional para email) ============
   async function geocodeAddress(geocoder, address){
     try{
       const { results } = await geocoder.geocode({ address });
@@ -388,6 +358,150 @@ Nogales Sonora</textarea>
     }catch{ return ""; } finally { clearTimeout(to); }
   }
 
+  // ===== Mini-parches: anti doble-clic y captura de errores =====
+  window.addEventListener('unhandledrejection', (e) => {
+    const msg = e?.reason?.message || String(e?.reason || e);
+    log('Error no capturado: ' + msg);
+  });
+
+  document.getElementById("start").addEventListener("click", start);
+
+  async function start(){
+    if (isRunning) return;
+    isRunning = true;
+    const startBtn = document.getElementById('start');
+    startBtn.disabled = true;
+
+    try{
+      const key=$("#apiKey").value.trim(); if(!key) { alert("Coloca tu API key."); return; }
+      // Cargar Maps JS si no está (para Geocoder y Details)
+      if(!window.google || !google.maps || !google.maps.importLibrary){
+        const s=document.createElement("script");
+        s.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(key)+"&v=quarterly";
+        s.async=true; s.defer=true; s.onerror=()=>log("No se pudo cargar Google Maps JS API.");
+        document.body.appendChild(s);
+        await new Promise(res=> s.onload=res);
+      }
+
+      const keywords = $("#keywords").value.split("\n").map(t=>t.trim()).filter(Boolean);
+      const locations = $("#locations").value.split("\n").map(t=>t.trim()).filter(Boolean);
+      if (!keywords.length || !locations.length) { alert("Agrega al menos 1 keyword y 1 ubicación."); return; }
+
+      const emailTimeout = Math.max(1, Math.min(20, parseInt($("#emailTimeout").value,10) || 10));
+      const language="es";
+
+      rows=[]; renderBody(); setProgress(0); setComboProgress(0);
+      const totalCombos = keywords.length * locations.length;
+      $("#comboProgress").textContent = `(0/${totalCombos})`;
+
+      const { Map }   = await google.maps.importLibrary("maps");
+      const { Place } = await google.maps.importLibrary("places");
+      const geocoder = new google.maps.Geocoder();
+
+      let comboIndex = 0;
+      for (const kw of keywords){
+        for (const loc of locations){
+          comboIndex++;
+          $("#statusText").textContent = `"${kw}" in "${loc}"`;
+          $("#comboProgress").textContent = `(${comboIndex}/${totalCombos})`;
+          setComboProgress( Math.round((comboIndex-1)/totalCombos*100) );
+
+          const center = await geocodeAddress(geocoder, loc);
+          if (!center){ log(`No se pudo geocodificar: ${loc}`); continue; }
+
+          let places = [];
+          try {
+            places = await textSearchAll({ apiKey: key, textQuery: kw, center, radius: 5000, language });
+          } catch (err) {
+            log(`Error en "${kw}" @ "${loc}": ${err && err.message ? err.message : err}`);
+            continue;
+          }
+
+          log(`(${comboIndex}/${totalCombos}) ${kw} @ ${loc}: ${places.length} resultados`);
+          let i=0;
+
+          for (const p of places){
+            i++;
+
+            // displayName en REST puede venir como objeto {text}
+            const displayName = (typeof p.displayName === "string") ? p.displayName
+                                  : (p.displayName && p.displayName.text) ? p.displayName.text
+                                  : "";
+
+            // Address components -> city/state/postal
+            let city="", state="", postal="";
+            if(Array.isArray(p.addressComponents)){
+              for(const c of p.addressComponents){
+                const t=c.types||[];
+                const longTxt=c.longText||c.long_name||c.name||"";
+                if(t.includes("locality")||t.includes("sublocality")||t.includes("postal_town")) city=city||longTxt;
+                if(t.includes("administrative_area_level_1")) state=state||longTxt;
+                if(t.includes("postal_code")) postal=postal||longTxt;
+              }
+            }
+
+            const phone = p.nationalPhoneNumber || p.internationalPhoneNumber || "";
+
+            // Fallback de MapLink (sin details)
+            const mapLinkFallback = "https://www.google.com/maps/search/?api=1&query=" +
+              encodeURIComponent((displayName || "") + " " + (p.formattedAddress || ""));
+
+            // Detalles opcionales (solo si se marcó Extraer Email)
+            let websiteUri = "";
+            let gmapsUri = "";
+            if (includeEmail) {
+              try {
+                const detail = new Place({ id: p.id, requestedLanguage: language, region: "mx" });
+                await detail.fetchFields({ fields: ["websiteUri", "googleMapsUri"] });
+                websiteUri = detail.websiteUri || "";
+                gmapsUri   = detail.googleMapsUri || "";
+              } catch (_) { /* ignorar errores para no frenar */ }
+            }
+
+            // Email best-effort
+            let email="";
+            if (includeEmail && websiteUri){
+              try { email = await tryExtractEmail(websiteUri, emailTimeout*1000); } catch(_) { email=""; }
+            }
+
+            const row = {
+              "KW": kw,
+              "Location": loc,
+              "Company Name": displayName,
+              "Category": p.primaryType || (p.types ? p.types.join("|") : ""),
+              "Website": websiteUri || "",
+              "Phone": phone,
+              "email": email,
+              "address": p.formattedAddress || "",
+              "Postal Code + City": (postal?postal+" ":"") + (city||""),
+              "state": state || "",
+              "pin code": postal || "",
+              "# Reviews": p.userRatingCount ?? "",
+              "Review": p.rating ?? "",
+              "CID": "", // sin details no hay CID fiable
+              "MapLink": gmapsUri || mapLinkFallback,
+              "Lat":  (p.location && (p.location.lat ?? p.location.latitude)) ?? "",
+              "Lng":  (p.location && (p.location.lng ?? p.location.longitude)) ?? ""
+            };
+            rows.push(row);
+
+            if (i % 5 === 0) renderBody();
+            setProgress( Math.min(100, Math.round((i/Math.max(1,places.length))*100)) );
+          }
+
+          renderBody();
+        }
+      }
+
+      setComboProgress(100);
+      log("Proceso finalizado.");
+    } catch(err){
+      log('Fallo inesperado: ' + (err?.message || err));
+    } finally {
+      isRunning = false;
+      document.getElementById('start').disabled = false;
+    }
+  }
   </script>
 </body>
 </html>
