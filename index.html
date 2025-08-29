@@ -5,9 +5,9 @@
   <title>Scrapping Tool — Encabezados estilo hoja</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <!-- CSS -->
-  <link rel="stylesheet" href="./assets/css/scrapping-tool.css?v=4">
-  <link rel="stylesheet" href="./assets/css/utilities.css?v=4">
-  <link rel="stylesheet" href="./assets/css/print.css?v=4" media="print">
+  <link rel="stylesheet" href="./assets/css/scrapping-tool.css?v=5">
+  <link rel="stylesheet" href="./assets/css/utilities.css?v=5">
+  <link rel="stylesheet" href="./assets/css/print.css?v=5" media="print">
 </head>
 <body>
   <!-- ======== App ======== -->
@@ -82,10 +82,18 @@ Nogales Sonora</textarea>
   const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
   $("#origin").textContent = location.origin;
 
+  // Persistencia simple de API Key
+  const apiKey = $("#apiKey");
+  apiKey.value = localStorage.getItem('st_api_key') || "";
+  apiKey.addEventListener('change', () => localStorage.setItem('st_api_key', apiKey.value));
+
+  // Encabezados base + Lat/Lng
   const headersWantedBase = [
     "KW","Location","Company Name","Category","Website","Phone","email","address",
-    "Postal Code + City","state","pin code","# Reviews","Review","CID","MapLink"
+    "Postal Code + City","state","pin code","# Reviews","Review","CID","MapLink",
+    "Lat","Lng"
   ];
+
   let rows = [];
   let includeLatLng = true;
   let includeEmail = false;
@@ -105,12 +113,7 @@ Nogales Sonora</textarea>
   function setProgress(p){ $("#bar").style.width = Math.max(0,Math.min(100,p)) + "%"; }
   function setComboProgress(p){ $("#comboBar").style.width = Math.max(0,Math.min(100,p)) + "%"; }
 
-  // Persistencia simple de API Key
-  const apiKey = $("#apiKey");
-  apiKey.value = localStorage.getItem('st_api_key') || "";
-  apiKey.addEventListener('change', () => localStorage.setItem('st_api_key', apiKey.value));
-
-  // Contadores dinámicos en labels
+  // Helpers UI
   function updateCounters(){
     const k = $("#keywords").value.split("\n").map(s=>s.trim()).filter(Boolean).length;
     const l = $("#locations").value.split("\n").map(s=>s.trim()).filter(Boolean).length;
@@ -124,7 +127,14 @@ Nogales Sonora</textarea>
   // Tabla
   function currentHeaders(){
     const h = [...headersWantedBase];
-    if (!includeEmail) { const i=h.indexOf("email"); if (i>-1) h.splice(i,1); }
+    if (!includeEmail) {
+      const i = h.indexOf("email"); if (i > -1) h.splice(i, 1);
+    }
+    if (!includeLatLng) {
+      ["Lat","Lng"].forEach(col=>{
+        const i = h.indexOf(col); if (i > -1) h.splice(i,1);
+      });
+    }
     return h;
   }
   function renderHeader(){
@@ -175,12 +185,66 @@ Nogales Sonora</textarea>
 
   renderHeader(); renderBody();
 
+  // ===== REST Places Text Search (todas las páginas) =====
+  async function textSearchAll({ apiKey, textQuery, center, radius = 5000, language = "es" }) {
+    const url = "https://places.googleapis.com/v1/places:searchText";
+    const headers = {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": apiKey,
+      // FieldMask: solo lo necesario (coste y rendimiento)
+      "X-Goog-FieldMask": [
+        "places.id",
+        "places.displayName",
+        "places.formattedAddress",
+        "places.location",
+        "places.primaryType",
+        "places.types",
+        "places.nationalPhoneNumber",
+        "places.internationalPhoneNumber",
+        "places.rating",
+        "places.userRatingCount",
+        "places.addressComponents",
+        "nextPageToken"
+      ].join(",")
+    };
+
+    let pageToken = null;
+    const results = [];
+    do {
+      const body = {
+        textQuery,
+        languageCode: language,
+        locationBias: {
+          circle: {
+            center: { latitude: center.lat, longitude: center.lng },
+            radius
+          }
+        },
+        pageSize: 20,
+        pageToken
+      };
+
+      const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
+      if (!res.ok) {
+        const t = await res.text().catch(()=>String(res.status));
+        throw new Error(`HTTP ${res.status} en places:searchText: ${t}`);
+      }
+      const data = await res.json();
+      results.push(...(data.places || []));
+      pageToken = data.nextPageToken || null;
+      // Respetuoso: pequeña pausa entre páginas
+      if (pageToken) await new Promise(r=>setTimeout(r, 300));
+    } while (pageToken);
+
+    return results;
+  }
+
   // ===== EXTRACCIÓN (lote: keywords x ubicaciones) =====
   $("#start").addEventListener("click", start);
 
   async function start(){
     const key=$("#apiKey").value.trim(); if(!key) return alert("Coloca tu API key.");
-    // Cargar Maps JS si no está
+    // Cargar Maps JS si no está (para Geocoding y Details opcional)
     if(!window.google || !google.maps || !google.maps.importLibrary){
       const s=document.createElement("script");
       s.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(key)+"&v=quarterly";
@@ -197,137 +261,4 @@ Nogales Sonora</textarea>
     const language="es";
 
     rows=[]; renderBody(); setProgress(0); setComboProgress(0);
-    const totalCombos = keywords.length * locations.length;
-    $("#comboProgress").textContent = `(0/${totalCombos})`;
-
-    const { Map } = await google.maps.importLibrary("maps");
-    const { Place } = await google.maps.importLibrary("places");
-    const geocoder = new google.maps.Geocoder();
-
-    let comboIndex = 0;
-    for (const kw of keywords){
-      for (const loc of locations){
-        comboIndex++;
-        $("#statusText").textContent = `"${kw}" in "${loc}"`;
-        $("#comboProgress").textContent = `(${comboIndex}/${totalCombos})`;
-        setComboProgress( Math.round((comboIndex-1)/totalCombos*100) );
-
-        const center = await geocodeAddress(geocoder, loc);
-        if (!center){ log(`No se pudo geocodificar: ${loc}`); continue; }
-
-        const dummy=document.createElement("div"); dummy.style.width="0"; dummy.style.height="0"; document.body.appendChild(dummy);
-        const map=new Map(dummy,{center,zoom:12});
-
-        // --- CORREGIDO: SIN websiteUri/googleMapsUri en fields ---
-        const req = {
-          textQuery: kw,
-          fields: [
-            "id","displayName","formattedAddress","location","types","primaryType",
-            "nationalPhoneNumber","internationalPhoneNumber",
-            "rating","userRatingCount","addressComponents"
-          ],
-          locationBias: map.getCenter(),
-          maxResultCount: 50,
-          language, region:"mx"
-        };
-
-        try{
-          const { places } = await Place.searchByText(req);
-          const total = places?.length || 0;
-          log(`(${comboIndex}/${totalCombos}) ${kw} @ ${loc}: ${total} resultados`);
-
-          let i=0;
-          for (const p of places){
-            i++;
-
-            // Address components -> city/state/postal
-            let city="", state="", postal="";
-            if(Array.isArray(p.addressComponents)){
-              for(const c of p.addressComponents){
-                const t=c.types||[];
-                const longTxt=c.longText||c.long_name||c.name||"";
-                if(t.includes("locality")||t.includes("sublocality")||t.includes("postal_town")) city=city||longTxt;
-                if(t.includes("administrative_area_level_1")) state=state||longTxt;
-                if(t.includes("postal_code")) postal=postal||longTxt;
-              }
-            }
-            const phone = p.nationalPhoneNumber || p.internationalPhoneNumber || "";
-
-            // Fallback de MapLink si no pedimos details
-            const mapLinkFallback = "https://www.google.com/maps/search/?api=1&query=" +
-              encodeURIComponent((p.displayName || "") + " " + (p.formattedAddress || ""));
-
-            // --- Detalles opcionales (sólo si extraer email) ---
-            let websiteUri = "";
-            let gmapsUri = "";
-            if (includeEmail) {
-              try {
-                const detail = new Place({ id: p.id, requestedLanguage: language, region: "mx" });
-                await detail.fetchFields({ fields: ["websiteUri", "googleMapsUri"] });
-                websiteUri = detail.websiteUri || "";
-                gmapsUri   = detail.googleMapsUri || "";
-              } catch (_) { /* ignora errores de details para no frenar */ }
-            }
-
-            // Email best-effort (si se activó y tenemos sitio)
-            let email="";
-            if (includeEmail && websiteUri){
-              try { email = await tryExtractEmail(websiteUri, emailTimeout*1000); } catch(_) { email=""; }
-            }
-
-            const row = {
-              "KW": kw,
-              "Location": loc,
-              "Company Name": p.displayName || "",
-              "Category": p.primaryType || (p.types ? p.types.join("|") : ""),
-              "Website": websiteUri || "",
-              "Phone": phone,
-              "email": email,
-              "address": p.formattedAddress || "",
-              "Postal Code + City": (postal?postal+" ":"") + (city||""),
-              "state": state || "",
-              "pin code": postal || "",
-              "# Reviews": p.userRatingCount ?? "",
-              "Review": p.rating ?? "",
-              "CID": "", // sin details no tenemos CID fiable
-              "MapLink": gmapsUri || mapLinkFallback
-            };
-            rows.push(row);
-
-            if (i % 5 === 0) renderBody();
-            setProgress( Math.min(100, Math.round((i/Math.max(1,total))*100)) );
-          }
-          renderBody();
-        }catch(e){
-          log(`Error en "${kw}" @ "${loc}": ${e && e.message ? e.message : e}`);
-        }
-      }
-    }
-    setComboProgress(100);
-    log("Proceso finalizado.");
-  }
-
-  async function geocodeAddress(geocoder, address){
-    try{
-      const { results } = await geocoder.geocode({ address });
-      if (results && results[0]){
-        const { lat, lng } = results[0].geometry.location;
-        return { lat: lat(), lng: lng() };
-      }
-      return null;
-    }catch{ return null; }
-  }
-
-  async function tryExtractEmail(url, timeoutMs){
-    const ctrl = new AbortController();
-    const to = setTimeout(()=>ctrl.abort(), timeoutMs);
-    try{
-      const res = await fetch(url, { mode:"cors", signal: ctrl.signal });
-      const text = await res.text();
-      const m = text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
-      return m ? m[0] : "";
-    }catch{ return ""; } finally { clearTimeout(to); }
-  }
-  </script>
-</body>
-</html>
+    const totalCombos
