@@ -1,395 +1,371 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <title>Scrapping Tool — Google Places</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Scrapping Tool — Google Places</title>
 
-  <!-- tus CSS (déjalos si ya existen en tu repo) -->
-  <link rel="stylesheet" href="./assets/css/scrapping-tool.css?v=9">
-  <link rel="stylesheet" href="./assets/css/utilities.css?v=9">
-  <link rel="stylesheet" href="./assets/css/print.css?v=9" media="print">
+<style>
+  :root{ --panel:#111; --border:#2a2a2a; --fg:#eaeaea; --muted:#bfbfbf; --accent:#1db954; }
+  html,body{margin:0;padding:0;background:#0b0b0b;color:var(--fg);font:14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;}
+  .app{padding:12px;}
+  /* ======= BARRA ÚNICA ======= */
+  .unibar{
+    display:grid;
+    grid-template-columns: 1.3fr 1.3fr 1fr .8fr .8fr .9fr .6fr .9fr .9fr;
+    gap:8px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px;
+  }
+  .cell{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .head{font-size:12px;color:var(--muted)}
+  textarea, input[type="text"], input[type="number"]{
+    width:100%; min-height:36px; box-sizing:border-box;
+    background:#1a1a1a; color:var(--fg); border:1px solid var(--border); border-radius:8px; padding:8px 10px;
+  }
+  textarea{min-height:58px; resize:vertical}
+  .checkwrap{
+    height:36px; display:flex; align-items:center; justify-content:center;
+    background:#1a1a1a; border:1px solid var(--border); border-radius:8px;
+  }
+  .checkwrap input{transform:scale(1.15)}
+  .btn{height:36px; border-radius:8px; border:1px solid var(--border); background:#2b2b2b; color:#fff; font-weight:600}
+  .btn.primary{background:var(--accent); border-color:#159a45; color:#0b130d}
+  .btn:disabled{opacity:.6;cursor:not-allowed}
 
-  <style>
-    :root{ --panel:#121212; --border:#2a2a2a; }
-
-    .app{ display:grid; grid-template-columns:340px 1fr; gap:16px; padding:14px; }
-    aside{ background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px; }
-    main{ min-width:0; }
-
-    /* ====== BARRA SUPERIOR UNIFICADA ====== */
-    .toolbar{
-      position:sticky; top:0; z-index:5;
-      display:flex; align-items:center; gap:14px; flex-wrap:wrap;
-      padding:10px 12px; background:var(--panel); border:1px solid var(--border);
-      border-radius:10px; margin-bottom:12px;
-    }
-    .tgroup{ display:flex; align-items:center; gap:12px; }
-    .ctrl{ display:flex; flex-direction:column; align-items:flex-start; gap:6px; min-width:max-content; }
-    .ctrl .caption{ font-size:11px; opacity:.8; line-height:1; margin-left:2px; }
-    .ctrl .inline{ display:flex; align-items:center; gap:8px; }
-
-    .pill{
-      display:inline-flex; align-items:center; gap:8px;
-      background:rgba(255,255,255,.06); border:1px solid var(--border);
-      padding:6px 10px; border-radius:999px; font-size:13px;
-    }
-    .pill .dot{ width:8px; height:8px; border-radius:50%; background:#1dd75b; display:inline-block; }
-
-    .progress{ height:8px; background:rgba(255,255,255,.06); border-radius:999px; overflow:hidden; }
-    .progress>div{ height:100%; width:0%; background:#1dd75b; transition:width .25s; }
-    .progress.slim{ height:6px; }
-
-    .badge{
-      min-width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center;
-      background:#0f1b2a; color:#fff; font-weight:700; border:1px solid var(--border);
-    }
-    .checkpill{
-      display:inline-flex; align-items:center; gap:6px;
-      background:rgba(255,255,255,.06); border:1px solid var(--border);
-      padding:6px 10px; border-radius:999px; font-size:13px;
-    }
-    .btn{ background:#2b2b2b; border:1px solid var(--border); color:#fff; padding:8px 12px; border-radius:10px; }
-    .btn.primary{ background:#1db954; border-color:#17a84a; color:#0b120e; font-weight:700; }
-    .btn:disabled{ opacity:.6; cursor:not-allowed; }
-
-    /* buscador CORTO (ajustable) */
-    .searchbox{ width:300px; flex:0 0 300px; padding:8px 10px; border-radius:10px; border:1px solid var(--border); background:#1a1a1a; color:#fff; }
-
-    .tiny{ width:64px; padding:6px 8px; text-align:center; font-variant-numeric:tabular-nums;
-           border-radius:10px; border:1px solid var(--border); background:#1a1a1a; color:#fff; }
-    .help{ display:inline-block; width:16px; height:16px; border-radius:50%; text-align:center; line-height:16px; font-size:12px; margin-left:6px; background:rgba(255,255,255,.12); cursor:help; }
-
-    /* ====== TABLA ====== */
-    #table{ table-layout:fixed; width:100%; border-collapse:separate; border-spacing:0; }
-    #table th,#table td{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:8px 10px; }
-    #thead th{ position:relative; background:#161616; }
-    .col-resizer{ position:absolute; top:0; right:0; bottom:0; width:6px; cursor:col-resize; user-select:none; }
-    .col-resizer:hover{ background:rgba(255,255,255,.06); }
-
-    /* inputs laterales */
-    aside input, aside textarea{ width:100%; border:1px solid var(--border); border-radius:10px; background:#1a1a1a; color:#fff; padding:10px; outline:none; }
-    aside textarea{ min-height:120px; resize:vertical; }
-    .hint{ font-size:12px; opacity:.8; }
-
-    /* ====== KILL SWITCH por si quedan restos viejos ====== */
-    .search-block, .action-block{ display:none !important; }
-  </style>
+  /* ======= TABLA ======= */
+  .panel{margin-top:12px}
+  .log{white-space:pre-wrap;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;max-height:120px;overflow:auto}
+  .tblwrap{overflow:auto;max-height:65vh;border:1px solid var(--border);border-radius:10px}
+  table{table-layout:fixed;width:100%;border-collapse:separate;border-spacing:0}
+  th,td{padding:8px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  thead th{position:relative;background:#161616}
+  .col-resizer{position:absolute;right:0;top:0;bottom:0;width:6px;cursor:col-resize}
+  .col-resizer:hover{background:rgba(255,255,255,.06)}
+  thead input{width:100%;box-sizing:border-box;background:#1a1a1a;color:#fff;border:1px solid var(--border);border-radius:8px;padding:6px 8px}
+</style>
 </head>
 <body>
-  <div class="app">
-    <!-- ===== LATERAL ===== -->
-    <aside>
-      <h1>Scrapping Tool</h1>
-      <p class="hint" style="margin-bottom:12px">Google Maps — <b>Places API (New)</b> + Maps JS</p>
+<div class="app">
 
-      <label style="margin-top:14px">API Key</label>
-      <input id="apiKey" placeholder="pegar aqui la Key"/>
-
-      <label id="kwLabel">Keywords (0)</label>
+  <!-- ====== BARRA ÚNICA ====== -->
+  <div class="unibar" id="unibar">
+    <div class="cell">
+      <div class="head">Keywords</div>
       <textarea id="keywords">Restaurante</textarea>
+    </div>
 
-      <label id="locLabel">Ubicaciones (0)</label>
+    <div class="cell">
+      <div class="head">Ubicaciones</div>
       <textarea id="locations">Hermosillo Sonora
 Nogales Sonora</textarea>
+    </div>
 
-      <p class="hint">Origen: <span id="origin"></span></p>
-    </aside>
+    <div class="cell">
+      <div class="head">API Key</div>
+      <input type="text" id="apiKey" placeholder="pegar aqui la Key">
+    </div>
 
-    <!-- ===== MAIN ===== -->
-    <main>
-      <!-- === BARRA UNICA ARRIBA === -->
-      <div class="toolbar">
-        <div class="tgroup" id="comboGroup">
-          <div class="pill" id="statusPill" title="Combinación actual (Keyword en Ubicación)">
-            <span class="dot"></span>
-            <span id="statusText">“Keyword in Ubicación”</span>
-          </div>
-          <div class="ctrl">
-            <span class="caption">Progreso combinaciones <span id="comboProgress">(0/0)</span></span>
-            <div class="progress slim" aria-label="Progreso de combinaciones"><div id="comboBar"></div></div>
-          </div>
-        </div>
+    <div class="cell">
+      <div class="head">Extract Lat & Log</div>
+      <div class="checkwrap"><input type="checkbox" id="includeLatLng" checked disabled></div>
+    </div>
 
-        <div class="tgroup" id="resultsGroup">
-          <div class="ctrl">
-            <span class="caption">Resultados</span>
-            <div class="inline" style="gap:10px">
-              <div class="badge" title="Resultados visibles/filtrados"><span id="count">0</span></div>
-              <div>
-                <div style="font-weight:700; font-size:12px; opacity:.85">ENCONTRADOS</div>
-                <div class="progress" aria-label="Progreso de lectura"><div id="bar"></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div class="cell">
+      <div class="head">Extract Email</div>
+      <div class="checkwrap"><input type="checkbox" id="extractEmail"></div>
+    </div>
 
-        <div class="ctrl">
-          <span class="caption">Datos</span>
-          <button class="btn" id="clear" title="Limpiar resultados y log">Limpiar Datos</button>
-        </div>
+    <div class="cell">
+      <div class="head">Extract Website</div>
+      <div class="checkwrap"><input type="checkbox" id="includeWebsite"></div>
+    </div>
 
-        <div class="ctrl">
-          <span class="caption">Campos</span>
-          <div class="inline">
-            <label class="checkpill" title="Latitud y Longitud (siempre activado)">
-              <input type="checkbox" id="includeLatLng" checked disabled aria-label="Latitud y Longitud"/> Lat & Long
-            </label>
-            <label class="checkpill" title="Solicitar websiteUri (Place Details)">
-              <input type="checkbox" id="includeWebsite" aria-label="Incluir Website"/> Website
-            </label>
-            <label class="checkpill" title="Intentar detectar email desde el sitio (puede fallar por CORS)">
-              <input type="checkbox" id="extractEmail" aria-label="Extraer Email"/> Email
-              <span class="help" aria-hidden="true">?</span>
-            </label>
-          </div>
-        </div>
+    <div class="cell">
+      <div class="head">Seg Max Email</div>
+      <input type="number" id="emailTimeoutTop" min="1" max="20" value="10">
+    </div>
 
-        <div class="ctrl">
-          <span class="caption">Segundos máx. email</span>
-          <input class="tiny" id="emailTimeoutTop" value="10"
-                 aria-label="Segundos máximos para extraer email"
-                 title="Segundos máximos para intentar extraer email"/>
-        </div>
+    <div class="cell">
+      <div class="head">&nbsp;</div>
+      <button class="btn primary" id="start">Iniciar Extracción</button>
+    </div>
 
-        <div class="ctrl">
-          <span class="caption">Exportar</span>
-          <button class="btn" id="export" title="Descargar resultados en CSV">Descargar</button>
-        </div>
-
-        <div class="ctrl" style="min-width:240px">
-          <span class="caption">Buscar</span>
-          <input class="searchbox" id="globalSearch" placeholder="Buscar..." aria-label="Buscar en los resultados"/>
-        </div>
-
-        <div class="ctrl">
-          <span class="caption">Acción</span>
-          <button class="btn primary" id="start" title="Iniciar extracción">Iniciar extracción</button>
-        </div>
-      </div>
-
-      <!-- Panel resultados + tabla -->
-      <div class="panel">
-        <div id="log"></div>
-        <div style="height:12px"></div>
-        <div style="overflow:auto; max-height:62vh; border:1px solid var(--border); border-radius:10px">
-          <table id="table">
-            <thead id="thead"></thead>
-            <tbody id="tbody"></tbody>
-          </table>
-        </div>
-      </div>
-    </main>
+    <div class="cell">
+      <div class="head">&nbsp;</div>
+      <button class="btn" id="export">Descargar</button>
+    </div>
   </div>
 
-  <script>
-  "use strict";
-  const $=(s,r=document)=>r.querySelector(s); const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
-  $("#origin").textContent=location.origin;
+  <!-- ====== RESULTADOS ====== -->
+  <div class="panel">
+    <div class="log" id="log"></div>
+    <div class="tblwrap">
+      <table id="table">
+        <thead id="thead"></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
 
-  const apiKey=$("#apiKey");
-  apiKey.value=localStorage.getItem('st_api_key')||""; apiKey.addEventListener('change',()=>localStorage.setItem('st_api_key',apiKey.value));
+</div>
 
-  const headersWantedBase=[
-    "KW","Location","Company Name","Category","Website","Phone","email","address",
-    "Postal Code + City","state","pin code","# Reviews","Review","CID","MapLink",
-    "Lat","Lng","Plus Code","Status","Types","Embed"
-  ];
-  const COL_WIDTHS={
-    "KW":120,"Location":140,"Company Name":220,"Category":130,
-    "Website":180,"Phone":120,"email":220,"address":340,
-    "Postal Code + City":160,"state":120,"pin code":100,
-    "# Reviews":110,"Review":90,"CID":150,"MapLink":220,
-    "Lat":120,"Lng":120,"Plus Code":150,"Status":150,"Types":220,"Embed":220
-  };
+<script>
+"use strict";
 
-  let rows=[]; let includeEmail=false; let includeWebsite=false; let isRunning=false;
-  function toStr(v){return v==null?"":String(v);} function escCSV(v){return '"'+toStr(v).replace(/"/g,'""')+'"';}
-  function downloadCSV(name,data){ if(!data.length){alert("No hay filas.");return;}
-    const cols=Object.keys(data[0]); const out=[cols.map(escCSV).join(",")];
-    for(const r of data) out.push(cols.map(h=>escCSV(r[h])).join(",")); const blob=new Blob([out.join("\n")],{type:"text/csv;charset=utf-8;"});
-    const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-  }
-  function log(m){const el=$("#log"); el.textContent=(el.textContent?el.textContent+"\n":"")+m; console.log("[ScrappingTool]",m);}
-  function setProgress(p){$("#bar").style.width=Math.max(0,Math.min(100,p))+"%";}
-  function setComboProgress(p){$("#comboBar").style.width=Math.max(0,Math.min(100,p))+"%";}
-  function updateCounters(){
-    const k=$("#keywords").value.split("\n").map(s=>s.trim()).filter(Boolean).length;
-    const l=$("#locations").value.split("\n").map(s=>s.trim()).filter(Boolean).length;
-    $("#kwLabel").textContent=`Keywords (${k})`; $("#locLabel").textContent=`Ubicaciones (${l})`;
-  } $("#keywords").addEventListener("input",updateCounters); $("#locations").addEventListener("input",updateCounters); updateCounters();
+/* ===== Helpers ===== */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+function toStr(v){return v==null?"":String(v);}
+function escCSV(v){return '"'+toStr(v).replace(/"/g,'""')+'"'}
 
-  function currentHeaders(){ const h=[...headersWantedBase]; if(!includeEmail){ const i=h.indexOf("email"); if(i>-1) h.splice(i,1);} return h; }
+function log(msg){
+  const el=$("#log");
+  el.textContent = (el.textContent?el.textContent+"\n":"") + msg;
+  console.log("[ScrappingTool]", msg);
+}
+function setProgress(p){ const b=$("#bar"); if(b) b.style.width=Math.max(0,Math.min(100,p))+"%"; }
+function setComboProgress(p){ const b=$("#comboBar"); if(b) b.style.width=Math.max(0,Math.min(100,p))+"%"; }
 
-  function renderColGroup(){
-    const table=document.getElementById("table"); let colgroup=table.querySelector("colgroup"); if(colgroup) colgroup.remove();
-    colgroup=document.createElement("colgroup");
-    currentHeaders().forEach(h=>{ const col=document.createElement("col"); col.style.width=(COL_WIDTHS[h]||160)+"px"; colgroup.appendChild(col); });
-    table.insertBefore(colgroup,table.firstChild);
-  }
-  function makeHeadersResizable(){
-    const table=document.getElementById("table"); const colgroup=table.querySelector("colgroup");
-    const cols=colgroup?Array.from(colgroup.children):[]; const ths=Array.from(document.querySelectorAll("#thead tr:first-child th"));
-    ths.forEach((th,i)=>{
-      let grip=th.querySelector(".col-resizer");
-      if(!grip){grip=document.createElement("span"); grip.className="col-resizer"; th.appendChild(grip);}
-      else{const clone=grip.cloneNode(true); grip.replaceWith(clone); grip=clone;}
-      grip.addEventListener("mousedown",(ev)=>{
-        ev.preventDefault(); const startX=ev.pageX; const startW=parseInt((cols[i].style.width||th.offsetWidth)+"",10)||th.offsetWidth;
-        function onMove(e){ const nw=Math.max(60,startW+(e.pageX-startX)); cols[i].style.width=nw+"px"; const head=currentHeaders()[i]; if(head) COL_WIDTHS[head]=nw; }
-        function onUp(){document.removeEventListener("mousemove",onMove); document.removeEventListener("mouseup",onUp);}
-        document.addEventListener("mousemove",onMove); document.addEventListener("mouseup",onUp);
-      });
-    });
-  }
-  function renderHeader(){
-    renderColGroup(); const thead=$("#thead"); thead.innerHTML=""; const tr1=document.createElement("tr"), tr2=document.createElement("tr");
-    currentHeaders().forEach(h=>{ const th=document.createElement("th"); th.textContent=h; tr1.appendChild(th);
-      const th2=document.createElement("th"); const inp=document.createElement("input"); inp.placeholder="filtrar…"; inp.dataset.col=h; inp.addEventListener("input",renderBody); th2.appendChild(inp); tr2.appendChild(th2); });
-    thead.appendChild(tr1); thead.appendChild(tr2); makeHeadersResizable();
-  }
-  function renderBody(){
-    const tbody=$("#tbody"); tbody.innerHTML=""; const filters={}; $$("#thead input").forEach(i=>{const v=i.value.trim().toLowerCase(); if(v) filters[i.dataset.col]=v;});
-    const cols=currentHeaders(); const data=rows.map(r=>{const pruned={}; cols.forEach(c=>pruned[c]=r[c]??""); return pruned;})
-      .filter(r=>{for(const k in filters){ if(!toStr(r[k]).toLowerCase().includes(filters[k])) return false;} return true;});
-    for(const r of data){ const tr=document.createElement("tr"); cols.forEach(h=>{ const td=document.createElement("td"); td.textContent=toStr(r[h]??""); tr.appendChild(td);}); tbody.appendChild(tr);}
-    $("#count").textContent=data.length;
-  }
-  $("#clear").addEventListener("click",()=>{ rows=[]; $("#log").textContent=""; $("#count").textContent="0"; setProgress(0); setComboProgress(0); renderBody(); });
-  $("#export").addEventListener("click",()=>downloadCSV("resultados-scrapping.csv",rows));
-  $("#globalSearch").addEventListener("input",e=>{
-    const term=e.target.value.trim().toLowerCase(); $$("#thead input").forEach(i=>i.value="");
-    const tbody=$("#tbody"); tbody.innerHTML=""; const cols=currentHeaders();
-    const data=term?rows.filter(r=>Object.values(r).some(v=>toStr(v).toLowerCase().includes(term))):rows;
-    for(const r of data){ const tr=document.createElement("tr"); cols.forEach(h=>{ const td=document.createElement("td"); td.textContent=toStr(r[h]??""); tr.appendChild(td);}); tbody.appendChild(tr);}
-    $("#count").textContent=data.length;
+/* ===== UI state ===== */
+const apiKey=$("#apiKey");
+apiKey.value=localStorage.getItem("st_api_key")||"";
+apiKey.addEventListener("change",()=>localStorage.setItem("st_api_key", apiKey.value));
+
+let includeEmail=false, includeWebsite=false, isRunning=false;
+$("#extractEmail").addEventListener("change",e=>{ includeEmail=e.target.checked; renderHeader(); renderBody(); });
+$("#includeWebsite").addEventListener("change",e=>{ includeWebsite=e.target.checked; });
+
+/* ===== Tabla config ===== */
+const headersWantedBase=[
+  "KW","Location","Company Name","Category","Website","Phone","email","address",
+  "Postal Code + City","state","pin code","# Reviews","Review","CID","MapLink",
+  "Lat","Lng","Plus Code","Status","Types","Embed"
+];
+const COL_WIDTHS={
+  "KW":120,"Location":140,"Company Name":220,"Category":130,
+  "Website":180,"Phone":120,"email":220,"address":340,
+  "Postal Code + City":160,"state":120,"pin code":100,
+  "# Reviews":110,"Review":90,"CID":150,"MapLink":220,
+  "Lat":120,"Lng":120,"Plus Code":150,"Status":150,"Types":220,"Embed":220
+};
+let rows=[];
+
+function currentHeaders(){
+  const h=[...headersWantedBase];
+  if(!includeEmail){ const i=h.indexOf("email"); if(i>-1) h.splice(i,1); }
+  return h;
+}
+function renderColGroup(){
+  const table=$("#table");
+  let cg=table.querySelector("colgroup"); if(cg) cg.remove();
+  cg=document.createElement("colgroup");
+  currentHeaders().forEach(h=>{
+    const col=document.createElement("col");
+    col.style.width=(COL_WIDTHS[h]||160)+"px";
+    cg.appendChild(col);
   });
-  $("#extractEmail").addEventListener("change",e=>{includeEmail=e.target.checked; renderHeader(); renderBody();});
-  $("#includeWebsite").addEventListener("change",e=>{includeWebsite=e.target.checked;});
-
-  renderHeader(); renderBody();
-
-  async function textSearchAll({apiKey,textQuery,center,radius=5000,language="es"}){
-    const url="https://places.googleapis.com/v1/places:searchText";
-    const headers={
-      "Content-Type":"application/json",
-      "X-Goog-Api-Key":apiKey,
-      "X-Goog-FieldMask":[
-        "places.id","places.displayName","places.formattedAddress","places.location",
-        "places.primaryType","places.types","places.nationalPhoneNumber","places.internationalPhoneNumber",
-        "places.rating","places.userRatingCount","places.addressComponents","places.plusCode","places.businessStatus","nextPageToken"
-      ].join(",")
-    };
-    let pageToken=null; const results=[];
-    do{
-      const body={ textQuery, languageCode:language, locationBias:{circle:{center:{latitude:center.lat,longitude:center.lng},radius}}, pageSize:20, pageToken };
-      const res=await fetch(url,{method:"POST",headers,body:JSON.stringify(body)});
-      if(!res.ok){const t=await res.text().catch(()=>String(res.status)); throw new Error(`HTTP ${res.status} en places:searchText: ${t}`);}
-      const data=await res.json(); results.push(...(data.places||[])); pageToken=data.nextPageToken||null;
-      if(pageToken) await new Promise(r=>setTimeout(r,300));
-    }while(pageToken);
-    return results;
-  }
-
-  async function geocodeAddress(geocoder,address){
-    try{ const {results}=await geocoder.geocode({address}); if(results&&results[0]){ const {lat,lng}=results[0].geometry.location; return {lat:lat(),lng:lng()}; } return null; }
-    catch{ return null; }
-  }
-  async function tryExtractEmail(url,ms){
-    const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),ms);
-    try{ const res=await fetch(url,{mode:"cors",signal:ctrl.signal}); const text=await res.text(); const m=text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i); return m?m[0]:""; }
-    catch{ return ""; } finally{ clearTimeout(to); }
-  }
-
-  window.addEventListener('unhandledrejection',(e)=>{log('Error no capturado: '+(e?.reason?.message||String(e?.reason||e)));});
-  document.getElementById("start").addEventListener("click",start);
-
-  async function start(){
-    if(isRunning) return; isRunning=true; const btn=$("#start"); btn.disabled=true;
-    try{
-      const key=$("#apiKey").value.trim(); if(!key){alert("Coloca tu API key."); return;}
-      if(!window.google||!google.maps||!google.maps.importLibrary){
-        const s=document.createElement("script"); s.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(key)+"&v=quarterly"; s.async=true; s.defer=true;
-        s.onerror=()=>log("No se pudo cargar Google Maps JS API."); document.body.appendChild(s); await new Promise(r=>s.onload=r);
+  table.insertBefore(cg, table.firstChild);
+}
+function makeHeadersResizable(){
+  const table=$("#table");
+  const cols=Array.from(table.querySelectorAll("colgroup col"));
+  const ths=Array.from(document.querySelectorAll("#thead tr:first-child th"));
+  ths.forEach((th,i)=>{
+    let g=th.querySelector(".col-resizer");
+    if(!g){ g=document.createElement("span"); g.className="col-resizer"; th.appendChild(g); }
+    else { const c=g.cloneNode(true); g.replaceWith(c); g=c; }
+    g.addEventListener("mousedown",(ev)=>{
+      ev.preventDefault();
+      const startX=ev.pageX;
+      const startW=parseInt((cols[i].style.width||th.offsetWidth)+"",10)||th.offsetWidth;
+      function onMove(e){
+        const nw=Math.max(60,startW+(e.pageX-startX));
+        cols[i].style.width=nw+"px";
+        const head=currentHeaders()[i]; if(head) COL_WIDTHS[head]=nw;
       }
+      function onUp(){ document.removeEventListener("mousemove",onMove); document.removeEventListener("mouseup",onUp); }
+      document.addEventListener("mousemove",onMove);
+      document.addEventListener("mouseup",onUp);
+    });
+  });
+}
+function renderHeader(){
+  renderColGroup();
+  const thead=$("#thead"); thead.innerHTML="";
+  const tr1=document.createElement("tr"), tr2=document.createElement("tr");
+  currentHeaders().forEach(h=>{
+    const th=document.createElement("th"); th.textContent=h; tr1.appendChild(th);
+    const th2=document.createElement("th");
+    const inp=document.createElement("input"); inp.placeholder="filtrar…"; inp.dataset.col=h; inp.addEventListener("input",renderBody);
+    th2.appendChild(inp); tr2.appendChild(th2);
+  });
+  thead.appendChild(tr1); thead.appendChild(tr2);
+  makeHeadersResizable();
+}
+function renderBody(){
+  const tbody=$("#tbody"); tbody.innerHTML="";
+  const filters={}; $$("#thead input").forEach(i=>{ const v=i.value.trim().toLowerCase(); if(v) filters[i.dataset.col]=v;});
+  const cols=currentHeaders();
+  const data=rows.map(r=>{const pruned={}; cols.forEach(c=>pruned[c]=r[c]??""); return pruned;})
+                 .filter(r=>{ for(const k in filters){ if(!toStr(r[k]).toLowerCase().includes(filters[k])) return false; } return true; });
+  for(const r of data){
+    const tr=document.createElement("tr"); cols.forEach(h=>{ const td=document.createElement("td"); td.textContent=toStr(r[h]??""); tr.appendChild(td); });
+    tbody.appendChild(tr);
+  }
+}
+renderHeader(); renderBody();
 
-      const keywords=$("#keywords").value.split("\n").map(t=>t.trim()).filter(Boolean);
-      const locations=$("#locations").value.split("\n").map(t=>t.trim()).filter(Boolean);
-      if(!keywords.length||!locations.length){alert("Agrega al menos 1 keyword y 1 ubicación."); return;}
+/* ===== Export ===== */
+$("#export").addEventListener("click",()=>{
+  if(!rows.length){ alert("No hay filas."); return; }
+  const cols=Object.keys(rows[0]);
+  const csv=[ cols.map(escCSV).join(",") ];
+  for(const r of rows){ csv.push( cols.map(h=>escCSV(r[h])).join(",") ); }
+  const blob=new Blob([csv.join("\n")],{type:"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download="resultados-scrapping.csv"; document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+});
 
-      const emailTimeout=Math.max(1,Math.min(20,parseInt($("#emailTimeoutTop").value,10)||10));
-      const language="es";
+/* ===== Google Places (Text Search API NEW) ===== */
+async function textSearchAll({apiKey,textQuery,center,radius=5000,language="es"}){
+  const url="https://places.googleapis.com/v1/places:searchText";
+  const headers={
+    "Content-Type":"application/json",
+    "X-Goog-Api-Key":apiKey,
+    "X-Goog-FieldMask":[
+      "places.id","places.displayName","places.formattedAddress","places.location",
+      "places.primaryType","places.types",
+      "places.nationalPhoneNumber","places.internationalPhoneNumber",
+      "places.rating","places.userRatingCount",
+      "places.addressComponents","places.plusCode","places.businessStatus",
+      "nextPageToken"
+    ].join(",")
+  };
+  const out=[]; let pageToken=null;
+  do{
+    const body={ textQuery, languageCode:language,
+      locationBias:{ circle:{ center:{ latitude:center.lat, longitude:center.lng }, radius } },
+      pageSize:20, pageToken };
+    const res=await fetch(url,{method:"POST",headers,body:JSON.stringify(body)});
+    if(!res.ok){ const t=await res.text().catch(()=>String(res.status)); throw new Error(`HTTP ${res.status} en searchText: ${t}`); }
+    const data=await res.json(); out.push(...(data.places||[])); pageToken=data.nextPageToken||null;
+    if(pageToken) await new Promise(r=>setTimeout(r,300));
+  }while(pageToken);
+  return out;
+}
+async function geocodeAddress(geocoder, address){
+  try{
+    const { results } = await geocoder.geocode({ address });
+    if(results && results[0]){
+      const { lat, lng } = results[0].geometry.location;
+      return { lat: lat(), lng: lng() };
+    }
+    return null;
+  }catch{ return null; }
+}
+async function tryExtractEmail(url, timeoutMs){
+  const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),timeoutMs);
+  try{
+    const res=await fetch(url,{mode:"cors",signal:ctrl.signal});
+    const txt=await res.text(); const m=txt.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
+    return m?m[0]:"";
+  }catch{ return ""; } finally{ clearTimeout(to); }
+}
 
-      rows=[]; renderBody(); setProgress(0); setComboProgress(0);
-      const total=keywords.length*locations.length; $("#comboProgress").textContent=`(0/${total})`;
+/* ===== Start ===== */
+window.addEventListener('unhandledrejection',e=>log('Error no capturado: '+(e?.reason?.message||String(e?.reason||e))));
+$("#start").addEventListener("click", start);
 
-      const {Place}=await google.maps.importLibrary("places");
-      const geocoder=new google.maps.Geocoder();
+async function start(){
+  if(isRunning) return; isRunning=true; $("#start").disabled=true;
+  try{
+    const key=$("#apiKey").value.trim(); if(!key){ alert("Coloca tu API key."); return; }
 
-      let idx=0;
-      for(const kw of keywords){
-        for(const loc of locations){
-          idx++; $("#statusText").textContent=`"${kw}" in "${loc}"`;
-          $("#comboProgress").textContent=`(${idx}/${total})`;
-          setComboProgress(Math.round((idx-1)/total*100));
+    if(!window.google || !google.maps || !google.maps.importLibrary){
+      const s=document.createElement("script");
+      s.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(key)+"&v=quarterly";
+      s.async=true; s.defer=true; s.onerror=()=>log("No se pudo cargar Maps JS.");
+      document.body.appendChild(s); await new Promise(r=>s.onload=r);
+    }
 
-          const center=await geocodeAddress(geocoder,loc);
-          if(!center){ log(`No se pudo geocodificar: ${loc}`); continue; }
+    const keywords=$("#keywords").value.split("\n").map(s=>s.trim()).filter(Boolean);
+    const locations=$("#locations").value.split("\n").map(s=>s.trim()).filter(Boolean);
+    if(!keywords.length || !locations.length){ alert("Agrega al menos 1 keyword y 1 ubicación."); return; }
 
-          let places=[]; try{ places=await textSearchAll({apiKey:key,textQuery:kw,center,radius:5000,language}); }
-          catch(err){ log(`Error en "${kw}" @ "${loc}": ${err?.message||err}`); continue; }
+    const emailTimeout=Math.max(1,Math.min(20,parseInt($("#emailTimeoutTop").value,10)||10));
+    const language="es";
+    rows=[]; renderBody(); setProgress(0); setComboProgress(0);
 
-          log(`(${idx}/${total}) ${kw} @ ${loc}: ${places.length} resultados`);
-          let i=0;
-          for(const p of places){
-            i++;
-            const displayName= (typeof p.displayName==="string")?p.displayName:(p.displayName&&p.displayName.text)?p.displayName.text:"";
-            let city="",state="",postal="";
-            if(Array.isArray(p.addressComponents)){
-              for(const c of p.addressComponents){
-                const t=c.types||[]; const longTxt=c.longText||c.long_name||c.name||"";
-                if(t.includes("locality")||t.includes("sublocality")||t.includes("postal_town")) city=city||longTxt;
-                if(t.includes("administrative_area_level_1")) state=state||longTxt;
-                if(t.includes("postal_code")) postal=postal||longTxt;
-              }
+    const { Place } = await google.maps.importLibrary("places");
+    const geocoder=new google.maps.Geocoder();
+
+    let combo=0, total=keywords.length*locations.length;
+    for(const kw of keywords){
+      for(const loc of locations){
+        combo++; log(`(${combo}/${total}) ${kw} @ ${loc}`);
+
+        const center=await geocodeAddress(geocoder, loc);
+        if(!center){ log(`No se pudo geocodificar: ${loc}`); continue; }
+
+        let places=[];
+        try{ places=await textSearchAll({apiKey:key,textQuery:kw,center,radius:5000,language}); }
+        catch(err){ log(`Error "${kw}" @ "${loc}": ${err?.message||err}`); continue; }
+
+        let i=0;
+        for(const p of places){
+          i++;
+          const name=(typeof p.displayName==="string")?p.displayName: (p.displayName?.text || "");
+          let city="",state="",postal="";
+          if(Array.isArray(p.addressComponents)){
+            for(const c of p.addressComponents){
+              const t=c.types||[]; const v=c.longText||c.long_name||c.name||"";
+              if(t.includes("locality")||t.includes("sublocality")||t.includes("postal_town")) city=city||v;
+              if(t.includes("administrative_area_level_1")) state=state||v;
+              if(t.includes("postal_code")) postal=postal||v;
             }
-            const phone=p.nationalPhoneNumber||p.internationalPhoneNumber||"";
-            const mapLink="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent((displayName||" ")+" "+(p.formattedAddress||""));
-            const embed="https://www.google.com/maps?q="+encodeURIComponent((displayName||" ")+" "+(p.formattedAddress||""))+"&output=embed";
-
-            let websiteUri="";
-            if(includeWebsite||includeEmail){
-              try{ const detail=new Place({id:p.id,requestedLanguage:language,region:"mx"}); await detail.fetchFields({fields:["websiteUri"]}); websiteUri=detail.websiteUri||""; }
-              catch(_){}
-            }
-            let email="";
-            if(includeEmail&&websiteUri){
-              try{ email=await tryExtractEmail(websiteUri,emailTimeout*1000); }catch(_){ email=""; }
-            }
-
-            rows.push({
-              "KW":kw,"Location":loc,"Company Name":displayName,
-              "Category":p.primaryType||(p.types?p.types[0]:""),
-              "Website":websiteUri||"","Phone":phone,"email":email,"address":p.formattedAddress||"",
-              "Postal Code + City":(postal?postal+" ":"")+(city||""),"state":state||"","pin code":postal||"",
-              "# Reviews":p.userRatingCount??"","Review":p.rating??"","CID":"",
-              "MapLink":mapLink,"Lat":(p.location&&(p.location.lat??p.location.latitude))??"",
-              "Lng":(p.location&&(p.location.lng??p.location.longitude))??"",
-              "Plus Code":(p.plusCode?.compoundCode||p.plusCode?.globalCode||""),
-              "Status":p.businessStatus||"","Types":Array.isArray(p.types)?p.types.join("|"):"",
-              "Embed":embed
-            });
-
-            if(i%5===0) renderBody();
-            setProgress(Math.min(100,Math.round((i/Math.max(1,places.length))*100)));
           }
-          renderBody();
+          const phone=p.nationalPhoneNumber||p.internationalPhoneNumber||"";
+          const mapLink="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent((name||" ")+" "+(p.formattedAddress||""));
+          const embed="https://www.google.com/maps?q="+encodeURIComponent((name||" ")+" "+(p.formattedAddress||""))+"&output=embed";
+
+          let websiteUri="";
+          if(includeWebsite || includeEmail){
+            try{ const detail=new Place({id:p.id,requestedLanguage:language,region:"mx"}); await detail.fetchFields({fields:["websiteUri"]}); websiteUri=detail.websiteUri||""; }
+            catch(_){}
+          }
+          let email="";
+          if(includeEmail && websiteUri){ try{ email=await tryExtractEmail(websiteUri,emailTimeout*1000);}catch(_){ email=""; } }
+
+          rows.push({
+            "KW":kw,"Location":loc,"Company Name":name,
+            "Category":p.primaryType||(p.types?p.types[0]:""),
+            "Website":websiteUri||"","Phone":phone,"email":email,"address":p.formattedAddress||"",
+            "Postal Code + City":(postal?postal+" ":"")+(city||""),"state":state||"","pin code":postal||"",
+            "# Reviews":p.userRatingCount??"","Review":p.rating??"","CID":"",
+            "MapLink":mapLink,"Lat":(p.location&&(p.location.lat??p.location.latitude))??"",
+            "Lng":(p.location&&(p.location.lng??p.location.longitude))??"",
+            "Plus Code":(p.plusCode?.compoundCode||p.plusCode?.globalCode||""),
+            "Status":p.businessStatus||"","Types":Array.isArray(p.types)?p.types.join("|"):"",
+            "Embed":embed
+          });
+
+          if(i%5===0) renderBody();
+          setProgress(Math.min(100,Math.round((i/Math.max(1,places.length))*100)));
         }
+        renderBody();
       }
-      setComboProgress(100); log("Proceso finalizado.");
-    }catch(err){ log('Fallo inesperado: '+(err?.message||err)); }
-    finally{ isRunning=false; $("#start").disabled=false; }
+    }
+    log("Proceso finalizado.");
+  }catch(err){
+    log("Fallo inesperado: "+(err?.message||err));
+  }finally{
+    isRunning=false; $("#start").disabled=false;
   }
-  </script>
+}
+</script>
 </body>
 </html>
