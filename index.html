@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Scrapping Tool — Google Places</title>
 
-  <!-- Favicon inline -->
+  <!-- Favicon inline para evitar 404 -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><rect width='128' height='128' rx='24' fill='%230b0b0b'/><text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-size='68' fill='%231db954'>S</text></svg>">
 
   <style>
@@ -17,10 +17,10 @@
     html,body{ height:100%; margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif; color:var(--text); background:var(--bg); }
     .container{ max-width:1400px; margin:20px auto; padding:0 16px; }
 
-    /* Barra única horizontal con Estado / Ciudad / Colonia */
+    /* Barra única */
     .toolbar{
       display:grid;
-      grid-template-columns:220px 160px 160px 180px 260px 140px 320px 1fr; /* KW, Estado, Ciudad, Colonia, API+toggles, Radio+Seg, Extras, Acciones */
+      grid-template-columns:220px 160px 160px 180px 260px 140px 320px 1fr;
       gap:10px; background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:12px; align-items:start;
     }
     .grp{ display:flex; flex-direction:column; gap:6px; }
@@ -182,7 +182,7 @@
     const log = (m,k="")=>{ const el=$("#log"); el.textContent+=(el.textContent?"\n":"")+m; el.scrollTop=el.scrollHeight; console[(k==="err"?"error":k==="warn"?"warn":"log")](m); };
     const setFound = n => $("#found").textContent=n;
 
-    // Métricas (silencioso si tu red bloquea CountAPI/ipapi)
+    // Métricas simples (si la red las bloquea, la UI muestra "—" sin romper)
     const NS = location.host || "localdev";
     const capi = (kind,key)=>fetch(`https://api.countapi.xyz/${kind}/${encodeURIComponent(NS)}/${encodeURIComponent(key)}`).then(r=>r.ok?r.json():null).catch(()=>null);
     async function updateMetrics(){
@@ -233,6 +233,20 @@
       if (toggles.photo)   fm.push("places.photos.name");
       fm.push("nextPageToken");
       return fm.join(",");
+    }
+
+    // ---- NUEVO: parseador de addressComponents (postal, ciudad, estado, colonia) ----
+    function parseAddressComponents(ac){
+      const get = type => ac?.find(c => Array.isArray(c.types) && c.types.includes(type));
+      const val = (comp) => comp?.longText || comp?.shortText || "";
+
+      const postal = val(get("postal_code"));
+      // City: prioridad locality, luego postal_town, luego admin area level 2, luego sublocality
+      const city = val(get("locality")) || val(get("postal_town")) || val(get("administrative_area_level_2")) || val(get("sublocality")) || "";
+      const state = val(get("administrative_area_level_1"));
+      const neighborhood = val(get("neighborhood")) || val(get("sublocality")) || "";
+
+      return { postal, city, state, neighborhood };
     }
 
     // Geocoding
@@ -344,7 +358,7 @@
       a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);
     }
 
-    // Crea combinaciones Estado / Ciudad / Colonia
+    // Combinaciones con Estado / Ciudad / Colonia
     function buildTargets(ciudades, estados, colonias){
       const targets=[];
       const C = ciudades.length ? ciudades : [""];
@@ -417,21 +431,24 @@
                 let email=""; if(toggles.email){ email = await tryExtractEmail(website, parseInt($("#maxEmailSec").value||"10",10)); }
                 const partners=toggles.partners?detectPartners(website):"";
 
-                // Fila con columnas separadas de State / City / Colony
+                // ---- NUEVO: Postal + City desde addressComponents ----
+                const ac = parseAddressComponents(p.addressComponents||[]);
+                const cpCity = (ac.postal && ac.city) ? `${ac.postal} ${ac.city}` : (ac.postal || ac.city || "");
+
                 rows.push([
-                  kw,                 // 0 KW
-                  t.state||"",        // 1 State
-                  t.city||"",         // 2 City
-                  t.colony||"",       // 3 Colony
+                  kw,                 // 0 KW (lo buscado)
+                  t.state||"",        // 1 State (de la entrada)
+                  t.city||"",         // 2 City  (de la entrada)
+                  t.colony||"",       // 3 Colony(de la entrada)
                   name,               // 4 Company
                   cat,                // 5 Category
                   website,            // 6 Website (link)
                   phone,              // 7 Phone
                   email,              // 8 email
                   addr,               // 9 address
-                  "",                 // 10 Postal Code + City (no parseado)
-                  "",                 // 11 state (legacy, vacío)
-                  "",                 // 12 pin code (legacy, vacío)
+                  cpCity,             // 10 Postal Code + City  ← lleno
+                  ac.state||"",       // 11 state             ← del place real
+                  ac.postal||"",      // 12 pin code          ← del place real
                   count,              // 13 # Reviews
                   rating,             // 14 Review
                   p.id||"",           // 15 CID
