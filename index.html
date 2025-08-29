@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Scrapping Tool — Google Places</title>
 
-  <!-- Favicon inline para evitar 404 -->
+  <!-- Favicon inline -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><rect width='128' height='128' rx='24' fill='%230b0b0b'/><text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-size='68' fill='%231db954'>S</text></svg>">
 
   <style>
@@ -14,26 +14,26 @@
       --chip:#1f2937; --chip-txt:#c9d1d9; --border:#262626; --warn:#f59e0b; --err:#ef4444;
     }
     *{ box-sizing:border-box }
-    html,body{ height:100%; margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif; color:var(--text); background:var(--bg); }
-    .container{ max-width:1500px; margin:20px auto; padding:0 16px; }
+    html,body{ height:100%; margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif; color:var(--text); background:var(--bg) }
+    .container{ max-width:1500px; margin:20px auto; padding:0 16px }
 
-    /* Barra única (añadimos Zips) */
+    /* Barra única */
     .toolbar{
       display:grid;
-      grid-template-columns:220px 140px 140px 160px 170px 240px 140px 320px 1fr;
-      gap:10px; background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:12px; align-items:start;
+      grid-template-columns:220px 140px 140px 160px 170px 260px 160px 280px 1fr;
+      gap:10px; background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:12px; align-items:start
     }
-    .grp{ display:flex; flex-direction:column; gap:6px; }
+    .grp{ display:flex; flex-direction:column; gap:6px }
     .lbl{ font-size:12px; color:var(--muted) }
     textarea, input[type="text"], input[type="number"]{
-      width:100%; background:#0f0f0f; color:var(--text); border:1px solid var(--border); border-radius:10px; padding:10px; resize:vertical;
+      width:100%; background:#0f0f0f; color:var(--text); border:1px solid var(--border); border-radius:10px; padding:10px; resize:vertical
     }
     textarea{ height:64px }
-    .chips{ display:flex; flex-wrap:wrap; gap:8px; background:#0f0f0f; border:1px solid var(--border); border-radius:12px; padding:10px; min-height:64px; }
-    .chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; background:var(--chip); border:1px solid var(--border); border-radius:999px; font-size:12px; color:var(--chip-txt); }
-    .actions{ display:flex; gap:8px; align-items:center; justify-content:flex-end; }
-    button{ background:var(--accent); color:#08210e; border:0; border-radius:999px; padding:10px 14px; font-weight:600; cursor:pointer; }
-    .ghost{ background:#2a2a2a; color:#ddd; }
+    .chips{ display:flex; flex-wrap:wrap; gap:8px; background:#0f0f0f; border:1px solid var(--border); border-radius:12px; padding:10px; min-height:64px }
+    .chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; background:var(--chip); border:1px solid var(--border); border-radius:999px; font-size:12px; color:var(--chip-txt) }
+    .actions{ display:flex; gap:8px; align-items:center; justify-content:flex-end }
+    button{ background:var(--accent); color:#08210e; border:0; border-radius:999px; padding:10px 14px; font-weight:600; cursor:pointer }
+    .ghost{ background:#2a2a2a; color:#ddd }
 
     .metrics{ display:flex; align-items:center; gap:16px; margin:10px 0 6px; color:var(--muted) }
     .bullet{ width:6px; height:6px; background:#334155; border-radius:999px; display:inline-block; margin:0 8px }
@@ -48,6 +48,7 @@
     .count-badge{ display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:999px; background:#111; color:#a7f3d0; font-weight:700; border:1px solid var(--border); margin-right:8px }
     .subgrid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px }
     .disabled{ opacity:.5; pointer-events:none }
+    .help{ font-size:11px; color:#9ca3af; margin-top:6px; line-height:1.2 }
   </style>
 </head>
 <body>
@@ -78,6 +79,7 @@
       <div class="grp">
         <div class="lbl">Códigos postales</div>
         <textarea id="zips" placeholder="83260&#10;83150"></textarea>
+        <div class="help">Puedes dejarlo vacío si usarás ciudad/estado/colonia.</div>
       </div>
 
       <div class="grp">
@@ -88,6 +90,23 @@
           <label class="chip"><input id="t-website" type="checkbox">Website</label>
           <label class="chip"><input id="t-email" type="checkbox">Email <span class="muted" title="Puede fallar por CORS">?</span></label>
         </div>
+      </div>
+
+      <!-- NUEVO: Modo por CP -->
+      <div class="grp">
+        <div class="lbl">Modo por CP</div>
+        <div class="chips">
+          <label class="chip" title="Usa radio (círculo). Puedes escribir un CP y un radio pequeño.">
+            <input type="radio" name="mode" id="mode1" value="quick" checked> Rápido (radio)
+          </label>
+          <label class="chip" title="Geocodifica CP y limita por viewport rectangular.">
+            <input type="radio" name="mode" id="mode2" value="zipRect"> Preciso por CP (viewport)
+          </label>
+          <label class="chip" title="Viewport del CP + barrido con grid para más cobertura.">
+            <input type="radio" name="mode" id="mode3" value="zipGrid"> CP grande (viewport + grid)
+          </label>
+        </div>
+        <div class="help" id="modeHelp">Rápido: usa radio (círculo). Para CP, escribe el CP y usa radio pequeño (1–3 km).</div>
       </div>
 
       <div class="grp">
@@ -187,7 +206,7 @@
     const log = (m,k="")=>{ const el=$("#log"); el.textContent+=(el.textContent?"\n":"")+m; el.scrollTop=el.scrollHeight; console[(k==="err"?"error":k==="warn"?"warn":"log")](m); };
     const setFound = n => $("#found").textContent=n;
 
-    // Métricas (silenciosas si tu red bloquea)
+    // Métricas (silenciosas si falla)
     const NS = location.host || "localdev";
     const capi = (kind,key)=>fetch(`https://api.countapi.xyz/${kind}/${encodeURIComponent(NS)}/${encodeURIComponent(key)}`).then(r=>r.ok?r.json():null).catch(()=>null);
     async function updateMetrics(){
@@ -206,8 +225,38 @@
     Object.keys(mapIds).forEach(id=>{
       const el=$("#"+id); if(el){ toggles[mapIds[id]]=el.checked; el.addEventListener("change",()=>{ toggles[mapIds[id]]=el.checked; refreshGridParams(); }); }
     });
-    function refreshGridParams(){ $("#gridParams").classList.toggle("disabled", !toggles.grid); }
-    refreshGridParams();
+
+    // NUEVO: Modo por CP ↔ grid UI hints
+    function getMode(){
+      const r=document.querySelector('input[name="mode"]:checked');
+      return r?.value || "quick";
+    }
+    function refreshModeHelp(){
+      const m=getMode();
+      if(m==="quick"){
+        $("#modeHelp").textContent="Rápido: usa radio (círculo). Si escribes CP, usa radio pequeño (1–3 km).";
+      }else if(m==="zipRect"){
+        $("#modeHelp").textContent="Preciso por CP: usa viewport rectangular del CP (sin grid). Requiere escribir al menos un CP.";
+      }else{
+        $("#modeHelp").textContent="CP grande: usa viewport del CP + grid para mayor cobertura. Requiere CP.";
+      }
+      // UI de grid
+      if(m==="zipRect"){
+        $("#g-on").checked=false;
+        $("#g-on").disabled=true;
+        $("#gridParams").classList.add("disabled");
+      }else if(m==="zipGrid"){
+        $("#g-on").checked=true;
+        $("#g-on").disabled=true;
+        $("#gridParams").classList.remove("disabled");
+      }else{ // quick
+        $("#g-on").disabled=false;
+        refreshGridParams();
+      }
+    }
+    document.querySelectorAll('input[name="mode"]').forEach(r=>r.addEventListener('change', refreshModeHelp));
+    function refreshGridParams(){ $("#gridParams").classList.toggle("disabled", !$("#g-on").checked); }
+    refreshModeHelp();
 
     // CSV
     const toCSV = rows => rows.map(r=>r.map(v=>v==null?"":(/[",\n]/.test(String(v))?`"${String(v).replace(/"/g,'""')}"`:v)).join(",")).join("\n");
@@ -265,7 +314,7 @@
       }catch(e){ log(`[Geocode] fetch error: ${e}`, "err"); return await fallbackGeocodeByPlaces(address, key); }
     }
 
-    // Geocode por CP (obtiene viewport del CP)
+    // Geocode por CP (viewport del CP)
     async function geocodePostal(zip, key, country="MX"){
       const params = new URLSearchParams({ key, language:"es", region:country.toLowerCase() });
       params.append("components", `postal_code:${zip}|country:${country}`);
@@ -290,7 +339,7 @@
       }catch{ return null; }
     }
 
-    // Places SearchText: soporta circle o rectangle (viewport)
+    // Places SearchText: círculo o rectángulo (viewport)
     async function textSearchAll({ query, center, radiusM, viewport, key, lang="es", region="MX" }){
       const all=[]; let token;
       const endpoint=`https://places.googleapis.com/v1/places:searchText?key=${encodeURIComponent(key)}`;
@@ -361,12 +410,14 @@
       a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);
     }
 
-    // Combina Ciudad/Estado/Colonia + Zips
-    function buildTargetsWithZips(ciudades, estados, colonias, zips, country="MX"){
+    // Combina Ciudad/Estado/Colonia + Zips con MODO
+    function buildTargetsWithZips(ciudades, estados, colonias, zips, mode, country="MX"){
       const targets=[];
-      // 1) CPs: usar viewport del CP
+      // 1) CPs
       for(const zip of zips){ if(!zip) continue;
-        targets.push({ state:"", city:"", colony:"", label:`CP ${zip}`, query:`${zip}, ${country}`, coloniaFlag:false, useZipViewport:true, zip, country });
+        const useZipViewport = (mode!=="quick"); // modo2 y modo3 usan viewport
+        const forceGrid = (mode==="zipGrid");
+        targets.push({ state:"", city:"", colony:"", label:`CP ${zip}`, query:`${zip}, ${country}`, coloniaFlag:false, useZipViewport, zip, country, forceGrid });
       }
       // 2) Entrada normal
       const C = ciudades.length ? ciudades : [""];
@@ -375,13 +426,13 @@
         for(const city of C) for(const state of E) for(const colony of colonias){
           const label=[city,state,`Col. ${colony}`].filter(Boolean).join(", ");
           const query=[colony,city,state,country].filter(Boolean).join(", ");
-          targets.push({ state, city, colony, label, query, coloniaFlag:true, useZipViewport:false });
+          targets.push({ state, city, colony, label, query, coloniaFlag:true, useZipViewport:false, forceGrid:false });
         }
       } else {
         for(const city of C) for(const state of E){
           const label=[city,state].filter(Boolean).join(", ");
           const query=[city,state,country].filter(Boolean).join(", ");
-          targets.push({ state, city, colony:"", label, query, coloniaFlag:false, useZipViewport:false });
+          targets.push({ state, city, colony:"", label, query, coloniaFlag:false, useZipViewport:false, forceGrid:false });
         }
       }
       return targets;
@@ -398,15 +449,25 @@
       const estados=$("#estados").value.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
       const cols=$("#colonias").value.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
       const zips=$("#zips").value.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
+      const mode=getMode();
+
+      // Validación modo por CP
+      if ((mode==="zipRect" || mode==="zipGrid") && zips.length===0){
+        alert("El modo seleccionado requiere ingresar al menos un Código Postal.");
+        return;
+      }
 
       const rKm=Math.max(1,parseInt($("#radiusKm").value||"5",10)); const rM=rKm*1000;
-      const gridOn = $("#g-on").checked;
+      // Grid según modo
+      let gridOnUser = $("#g-on").checked;
+      if (mode==="zipRect"){ gridOnUser=false; }
+      if (mode==="zipGrid"){ gridOnUser=true; }
       const stepKm = Math.max(1, parseInt($("#g-step").value||"3",10));
       const maxCells = Math.max(1, parseInt($("#g-max").value||"60",10));
 
       const rows=[]; const seen=new Set(); let comb=0;
 
-      const targets = buildTargetsWithZips(ciudades, estados, cols, zips, "MX");
+      const targets = buildTargetsWithZips(ciudades, estados, cols, zips, mode, "MX");
       if (!targets.length){ log("Debes escribir al menos una Ciudad, Estado o Código Postal.","warn"); return; }
 
       for(const t of targets){
@@ -423,25 +484,25 @@
         const baseCenter = geo.center;
         const viewport = geo.viewport || null;
 
-        // Si es CP:
-        // - con Grid → generamos centros dentro del viewport y hacemos queries circulares
-        // - sin Grid → una sola query con locationRestriction rectangular
+        // Determinar estrategia según modo/target
         let centers = [];
         let useRectangle = false;
+        let gridOn = gridOnUser || t.forceGrid;
 
         if (t.useZipViewport && viewport){
-          if (gridOn){
+          if (mode==="zipRect"){
+            useRectangle = true; centers = [baseCenter];
+          } else if (mode==="zipGrid"){
+            gridOn = true;
             centers = buildGridCenters({center:baseCenter, viewport, stepKm, maxCells});
-          } else {
-            useRectangle = true; // usar rectangle una sola vez
-            centers = [baseCenter]; // para el bucle
+          } else { // quick con zip → círculo
+            centers = gridOn ? buildGridCenters({center:baseCenter, viewport, stepKm, maxCells}) : [baseCenter];
           }
         } else {
-          // Entrada normal: usar círculo (y grid si se activó)
           centers = gridOn ? buildGridCenters({center:baseCenter, viewport, stepKm, maxCells}) : [baseCenter];
         }
 
-        log(`Ubicación "${t.label}": centros a consultar = ${centers.length}${gridOn?" (grid activo)":""}${useRectangle?" (rectángulo)":""}`);
+        log(`Ubicación "${t.label}": centros=${centers.length}${gridOn?" (grid)":" (simple)"}${useRectangle?" (rectángulo)":` (radio ${rKm} km)`}`);
 
         for(const kw of kws){
           let idx=0;
@@ -474,12 +535,11 @@
                 let email=""; if(toggles.email){ email = await tryExtractEmail(website, parseInt($("#maxEmailSec").value||"10",10)); }
                 const partners=toggles.partners?detectPartners(website):"";
 
-                // Postal + City reales desde addressComponents
                 const ac = parseAddressComponents(p.addressComponents||[]);
                 const cpCity = (ac.postal && ac.city) ? `${ac.postal} ${ac.city}` : (ac.postal || ac.city || "");
 
                 rows.push([
-                  kw,                 // 0 KW (consulta)
+                  kw,                 // 0 KW
                   t.state||"",        // 1 State (entrada)
                   t.city||"",         // 2 City  (entrada)
                   t.colony||"",       // 3 Colony(entrada)
@@ -515,7 +575,7 @@
 
       renderRows(rows);
       log(`Proceso finalizado. Lugares únicos: ${rows.length}.`);
-      if (toggles.grid) log("Nota: Grid 60+ multiplica consultas. Revisa tu cuota/uso en Google Cloud.","warn");
+      if ($("#g-on").checked || getMode()==="zipGrid") log("Nota: Grid 60+ multiplica consultas. Revisa tu cuota/uso en Google Cloud.","warn");
     });
 
     $("#download").addEventListener("click", ()=>{
