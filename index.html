@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Scrapping Tool — Google Places</title>
 
-  <!-- Favicon inline (evita 404) -->
+  <!-- Favicon inline -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><rect width='128' height='128' rx='24' fill='%230b0b0b'/><text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-size='68' fill='%231db954'>S</text></svg>">
 
   <style>
@@ -14,13 +14,13 @@
       --chip:#1f2937; --chip-txt:#c9d1d9; --border:#262626; --warn:#f59e0b; --err:#ef4444;
     }
     *{ box-sizing:border-box }
-    html,body{ height:100%; margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; color:var(--text); background:var(--bg); }
+    html,body{ height:100%; margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif; color:var(--text); background:var(--bg); }
     .container{ max-width:1400px; margin:20px auto; padding:0 16px; }
 
-    /* Barra única horizontal */
+    /* Barra única horizontal con Estado / Ciudad / Colonia */
     .toolbar{
       display:grid;
-      grid-template-columns:220px 280px 260px 140px 320px 1fr;
+      grid-template-columns:220px 160px 160px 180px 260px 140px 320px 1fr; /* KW, Estado, Ciudad, Colonia, API+toggles, Radio+Seg, Extras, Acciones */
       gap:10px; background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:12px; align-items:start;
     }
     .grp{ display:flex; flex-direction:column; gap:6px; }
@@ -61,8 +61,18 @@
       </div>
 
       <div class="grp">
-        <div class="lbl">Ubicaciones</div>
-        <textarea id="locs" placeholder="Hermosillo Sonora&#10;Nogales Sonora"></textarea>
+        <div class="lbl">Ciudad(es)</div>
+        <textarea id="ciudades" placeholder="Hermosillo&#10;Nogales"></textarea>
+      </div>
+
+      <div class="grp">
+        <div class="lbl">Estado(s)</div>
+        <textarea id="estados" placeholder="Sonora&#10;Sinaloa"></textarea>
+      </div>
+
+      <div class="grp">
+        <div class="lbl">Colonia(s) (opcional)</div>
+        <textarea id="colonias" placeholder="Centro&#10;Pitic&#10;San Benito"></textarea>
       </div>
 
       <div class="grp">
@@ -151,34 +161,26 @@
     const log = (m,k="")=>{ const el=$("#log"); el.textContent+=(el.textContent?"\n":"")+m; el.scrollTop=el.scrollHeight; console[(k==="err"?"error":k==="warn"?"warn":"log")](m); };
     const setFound = n => $("#found").textContent=n;
 
-    // Métricas (CountAPI + ipapi)
+    // Métricas (si tu red bloquea CountAPI/ipapi, no pasa nada; se silencian)
     const NS = location.host || "localdev";
     const capi = (kind,key)=>fetch(`https://api.countapi.xyz/${kind}/${encodeURIComponent(NS)}/${encodeURIComponent(key)}`).then(r=>r.ok?r.json():null).catch(()=>null);
     async function updateMetrics(){
-      const v = await capi("get","pageviews"); const r = await capi("get","runs");
-      $("#m-visits").textContent = v?.value ?? "—"; $("#m-runs").textContent = r?.value ?? "—";
-      try{ const ip = await fetch("https://ipapi.co/json/"); const j = await ip.json(); $("#m-country").textContent = `${j.country_name||j.country||"?"} (${j.country||"?"})`; }catch{ $("#m-country").textContent="—"; }
+      try{ const v=await capi("get","pageviews"); $("#m-visits").textContent=v?.value ?? "—"; }catch{ $("#m-visits").textContent="—"; }
+      try{ const r=await capi("get","runs"); $("#m-runs").textContent=r?.value ?? "—"; }catch{ $("#m-runs").textContent="—"; }
+      try{ const ip=await fetch("https://ipapi.co/json/"); const j=await ip.json(); $("#m-country").textContent=`${j.country_name||j.country||"?"} (${j.country||"?"})`; }catch{ $("#m-country").textContent="—"; }
     }
-    updateMetrics(); capi("hit","pageviews").then(updateMetrics);
+    updateMetrics(); capi("hit","pageviews").then(updateMetrics).catch(()=>{});
 
     // Toggles
-    const toggles = {
-      latlng: $("#t-latlng").checked, website: $("#t-website").checked, email: $("#t-email").checked,
-      hours: $("#x-hours").checked, price: $("#x-price").checked, maps: $("#x-mapsuri").checked, photo: $("#x-photo").checked,
-      types: $("#x-types").checked, short: $("#x-short").checked, summary: $("#x-summary").checked, partners: $("#x-partners").checked,
-      grid:  $("#g-on").checked
+    const toggles = { latlng:true, website:false, email:false, hours:false, price:false, maps:false, photo:false, types:true, short:false, summary:false, partners:false, grid:false };
+    const mapIds = {
+      "t-latlng":"latlng","t-website":"website","t-email":"email","x-hours":"hours","x-price":"price","x-mapsuri":"maps",
+      "x-photo":"photo","x-types":"types","x-short":"short","x-summary":"summary","x-partners":"partners","g-on":"grid"
     };
-    for (const [id] of Object.entries(toggles)){
-      const el = document.querySelector(`#${id.replace(/^t-|^x-|^g-/,'')}`) || document.querySelector(`#${id}`);
-    }
-    ["t-latlng","t-website","t-email","x-hours","x-price","x-mapsuri","x-photo","x-types","x-short","x-summary","x-partners","g-on"].forEach(id=>{
-      const map = { "t-latlng":"latlng","t-website":"website","t-email":"email","x-hours":"hours","x-price":"price","x-mapsuri":"maps","x-photo":"photo","x-types":"types","x-short":"short","x-summary":"summary","x-partners":"partners","g-on":"grid" };
-      const el = $("#"+id); el.addEventListener("change",()=>{ toggles[map[id]] = el.checked; refreshGridParams(); });
+    Object.keys(mapIds).forEach(id=>{
+      const el=$("#"+id); if(el){ toggles[mapIds[id]]=el.checked; el.addEventListener("change",()=>{ toggles[mapIds[id]]=el.checked; refreshGridParams(); }); }
     });
-    function refreshGridParams(){
-      const box = $("#gridParams");
-      if (toggles.grid){ box.classList.remove("disabled"); } else { box.classList.add("disabled"); }
-    }
+    function refreshGridParams(){ $("#gridParams").classList.toggle("disabled", !toggles.grid); }
     refreshGridParams();
 
     // CSV
@@ -212,12 +214,48 @@
       return fm.join(",");
     }
 
-    // Geocoding
-    async function geocodeText(address,key){
-      const u=`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${encodeURIComponent(key)}`;
-      const r=await fetch(u); const j=await r.json();
-      if(j.status==="OK"&&j.results?.[0]){ const g=j.results[0].geometry; return { center:g.location, viewport:g.viewport||null }; }
-      return null;
+    // Geocoding (soporta colonia → sesgo neighborhood/sublocality)
+    async function geocodeText(address, key, {colonia=false} = {}){
+      const params = new URLSearchParams({
+        address,
+        language:"es",
+        region:"mx",
+        key
+      });
+      params.append("components","country:MX");
+      if (colonia){ params.append("result_type","neighborhood|sublocality|political"); }
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?${params.toString()}`;
+      try{
+        const r = await fetch(url);
+        const j = await r.json();
+        if (j.status === "OK" && j.results?.[0]){
+          const g=j.results[0].geometry;
+          return { center:g.location, viewport:g.viewport||null };
+        }
+        log(`[Geocode] ${address} → ${j.status}${j.error_message?": "+j.error_message:""}`, "warn");
+        return await fallbackGeocodeByPlaces(address, key);
+      }catch(e){
+        log(`[Geocode] fetch error: ${e}`, "err");
+        return await fallbackGeocodeByPlaces(address, key);
+      }
+    }
+
+    // Fallback con Places (si Geocoding falla/deshabilitado)
+    async function fallbackGeocodeByPlaces(q, key){
+      try{
+        const endpoint=`https://places.googleapis.com/v1/places:searchText?key=${encodeURIComponent(key)}`;
+        const body={ textQuery:q, maxResultCount:1, languageCode:"es", regionCode:"MX" };
+        const res=await fetch(endpoint,{
+          method:"POST",
+          headers:{ "Content-Type":"application/json", "X-Goog-FieldMask":"places.location,places.id,places.displayName" },
+          body:JSON.stringify(body)
+        });
+        if(!res.ok) return null;
+        const j=await res.json();
+        const p=j.places?.[0];
+        if(p?.location){ return { center:{ lat:p.location.latitude, lng:p.location.longitude }, viewport:null }; }
+        return null;
+      }catch{ return null; }
     }
 
     // Places SearchText con paginación
@@ -238,22 +276,19 @@
     const kmToLat = km => km/110.574;
     const kmToLng = (km,lat) => km/(111.320*Math.cos(lat*Math.PI/180));
 
-    // Genera centros para Grid usando viewport o una caja alrededor del centro
+    // Genera centros para Grid usando viewport o caja alrededor del centro
     function buildGridCenters({center, viewport, stepKm, maxCells}){
       const pts=[];
-      // Definimos bounds
       let sw, ne;
       if (viewport && viewport.southwest && viewport.northeast){
         sw = {lat: viewport.southwest.lat, lng: viewport.southwest.lng};
         ne = {lat: viewport.northeast.lat, lng: viewport.northeast.lng};
       } else {
-        // Caja de 2 * paso alrededor del centro si no hay viewport
         const dLat = kmToLat(stepKm*2);
         const dLng = kmToLng(stepKm*2, center.lat);
         sw = {lat:center.lat-dLat, lng:center.lng-dLng};
         ne = {lat:center.lat+dLat, lng:center.lng+dLng};
       }
-
       const latStep = kmToLat(stepKm);
       for(let lat=sw.lat; lat<=ne.lat; lat+=latStep){
         const lngStep = kmToLng(stepKm, lat||center.lat);
@@ -286,35 +321,63 @@
       a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);
     }
 
+    // Crea combinaciones Estado / Ciudad / Colonia
+    function buildTargets(ciudades, estados, colonias){
+      const targets=[];
+      const C = ciudades.length ? ciudades : [""];
+      const E = estados.length ? estados : [""];
+      // con colonia
+      if (colonias.length){
+        for(const c of C) for(const e of E) for(const col of colonias){
+          const city = c ? c : ""; const state = e ? e : "";
+          const label = `${city||"?"}, ${state||"?"} (Col. ${col})`.replace(/,\s\?/g,"").replace(/\?,/g,"").trim();
+          const query = [col, city, state, "MX"].filter(Boolean).join(", ");
+          targets.push({ label, query, colonia:true });
+        }
+      } else {
+        for(const c of C) for(const e of E){
+          const city = c ? c : ""; const state = e ? e : "";
+          const label = [city, state].filter(Boolean).join(", ");
+          const query = [city, state, "MX"].filter(Boolean).join(", ");
+          if (label || query) targets.push({ label, query, colonia:false });
+        }
+      }
+      return targets;
+    }
+
     // START
     $("#start").addEventListener("click", async ()=>{
       const key=$("#apiKey").value.trim(); if(!key){ alert("Pega tu API Key"); return; }
       $("#body").innerHTML=""; setFound(0); $("#log").textContent="Iniciando…";
-      capi("hit","runs").then(updateMetrics);
+      capi("hit","runs").then(updateMetrics).catch(()=>{});
 
       const kws=$("#kw").value.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
-      const locs=$("#locs").value.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
+      const ciudades=$("#ciudades").value.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
+      const estados=$("#estados").value.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
+      const cols=$("#colonias").value.split(/\n|,/).map(s=>s.trim()).filter(Boolean);
       const rKm=Math.max(1,parseInt($("#radiusKm").value||"5",10)); const rM=rKm*1000;
-      const rows=[]; const seen=new Set(); let comb=0;
 
       const gridOn = $("#g-on").checked;
       const stepKm = Math.max(1, parseInt($("#g-step").value||"3",10));
       const maxCells = Math.max(1, parseInt($("#g-max").value||"60",10));
 
-      for(const loc of locs){
-        const g = await geocodeText(loc, key);
-        if(!g){ log(`No se pudo geocodificar: ${loc}`,"warn"); continue; }
-        const baseCenter = {lat:g.center.lat, lng:g.center.lng};
+      const rows=[]; const seen=new Set(); let comb=0;
 
-        // Generamos centros: solo 1 (sin grid) o muchos (con grid)
+      const targets = buildTargets(ciudades, estados, cols);
+      if (!targets.length){ log("Debes escribir al menos una Ciudad o un Estado.","warn"); return; }
+
+      for(const t of targets){
+        const g = await geocodeText(t.query, key, {colonia:t.colonia});
+        if(!g){ log(`No se pudo geocodificar: ${t.label}`,"warn"); continue; }
+        const baseCenter = {lat:g.center.lat, lng:g.center.lng};
         const centers = gridOn ? buildGridCenters({center:baseCenter, viewport:g.viewport, stepKm, maxCells}) : [baseCenter];
-        log(`Ubicación "${loc}": centros a consultar = ${centers.length}${gridOn?" (grid activo)":""}`);
+        log(`Ubicación "${t.label}": centros a consultar = ${centers.length}${gridOn?" (grid activo)":""}`);
 
         for(const kw of kws){
           let idx=0;
           for(const c of centers){
             comb++; idx++;
-            log(`[${comb}] ${kw} @ ${loc} — centro ${idx}/${centers.length} (radio ${rKm} km)`);
+            log(`[${comb}] ${kw} @ ${t.label} — centro ${idx}/${centers.length} (radio ${rKm} km)`);
             try{
               const places = await textSearchAll({query:`${kw}`, center:c, radiusM:rM, key});
               for(const p of places){
@@ -326,15 +389,15 @@
                 const rating=p.rating||"", count=p.userRatingCount||"", guri=p.googleMapsUri||"";
                 const lat=p.location?.latitude||"", lng=p.location?.longitude||"";
                 const types=Array.isArray(p.types)?p.types:[]; const primary=p.primaryType||"";
-                const subTypes=toggles.types?types.filter(t=>t!==primary).join("|"):"";
+                const subTypes=toggles.types?types.filter(tt=>tt!==primary).join("|"):"";
                 const price=p.priceLevel!=null?String(p.priceLevel):"";
                 const shortAddr=p.shortFormattedAddress||"";
                 const hours=p.currentOpeningHours?.weekdayDescriptions?.join(" | ")||(p.currentOpeningHours?.openNow!=null?(p.currentOpeningHours.openNow?"abierto":"cerrado"):"");
                 const summary=p.editorialSummary?.text||"";
-                let website=""; // Para website real, habría que hacer Place Details con p.id (opcional a futuro)
+                let website=""; // (Place Details para website — opcional futuro)
                 let email=""; if(toggles.email){ email = await tryExtractEmail(website, parseInt($("#maxEmailSec").value||"10",10)); }
                 const partners=toggles.partners?detectPartners(website):"";
-                rows.push([ kw, loc, name, cat, website, phone, email, addr, "", "", "", count, rating, p.id||"", guri, lat, lng,
+                rows.push([ kw, t.label, name, cat, website, phone, email, addr, "", "", "", count, rating, p.id||"", guri, lat, lng,
                   (toggles.types?((p.primaryTypeDisplayName||primary)+(subTypes?` | ${subTypes}`:"")):""),
                   (toggles.price?price:""),
                   (toggles.hours?hours:""),
@@ -344,7 +407,7 @@
                 ]);
               }
             }catch(e){
-              log(`Error "${kw}" @ "${loc}" (centro ${idx}): HTTP ${e.status||"?"} → ${JSON.stringify(e.data||e)}`,"err");
+              log(`Error "${kw}" @ "${t.label}" (centro ${idx}): HTTP ${e.status||"?"} → ${JSON.stringify(e.data||e)}`,"err");
             }
           }
         }
