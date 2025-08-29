@@ -7,33 +7,37 @@
 
 <style>
   :root{ --panel:#111; --border:#2a2a2a; --fg:#eaeaea; --muted:#bfbfbf; --accent:#1db954; }
-  html,body{margin:0;padding:0;background:#0b0b0b;color:var(--fg);font:14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;}
+  html,body{margin:0;padding:0;background:#0b0b0b;color:var(--fg);font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
   .app{padding:12px;}
+
   /* ======= BARRA ÚNICA ======= */
   .unibar{
     display:grid;
-    grid-template-columns: 1.3fr 1.3fr 1fr .8fr .8fr .9fr .6fr .9fr .9fr;
+    /* 12 columnas: KW | Ubi | API | Lat | Web | Email | Radio | SegEmail | Extras | Iniciar | Exportar | (espacio flexible) */
+    grid-template-columns: 1.25fr 1.25fr 1fr .8fr .8fr .8fr .6fr .7fr 1.4fr .9fr .9fr auto;
     gap:8px;
     background:var(--panel);
     border:1px solid var(--border);
     border-radius:10px;
     padding:10px;
+    align-items:start;
   }
   .cell{display:flex;flex-direction:column;gap:6px;min-width:0}
   .head{font-size:12px;color:var(--muted)}
-  textarea, input[type="text"], input[type="number"]{
-    width:100%; min-height:36px; box-sizing:border-box;
-    background:#1a1a1a; color:var(--fg); border:1px solid var(--border); border-radius:8px; padding:8px 10px;
+  textarea,input[type="text"],input[type="number"]{
+    width:100%;min-height:36px;box-sizing:border-box;background:#1a1a1a;color:var(--fg);
+    border:1px solid var(--border);border-radius:8px;padding:8px 10px;
   }
-  textarea{min-height:58px; resize:vertical}
-  .checkwrap{
-    height:36px; display:flex; align-items:center; justify-content:center;
-    background:#1a1a1a; border:1px solid var(--border); border-radius:8px;
-  }
+  textarea{min-height:58px;resize:vertical}
+  .checkwrap{height:36px;display:flex;align-items:center;justify-content:center;background:#1a1a1a;border:1px solid var(--border);border-radius:8px;}
   .checkwrap input{transform:scale(1.15)}
-  .btn{height:36px; border-radius:8px; border:1px solid var(--border); background:#2b2b2b; color:#fff; font-weight:600}
-  .btn.primary{background:var(--accent); border-color:#159a45; color:#0b130d}
+  .btn{height:36px;border-radius:8px;border:1px solid var(--border);background:#2b2b2b;color:#fff;font-weight:600;white-space:nowrap;padding:0 12px}
+  .btn.primary{background:var(--accent);border-color:#159a45;color:#0b130d}
   .btn:disabled{opacity:.6;cursor:not-allowed}
+  .extras{
+    display:flex;flex-wrap:wrap;gap:8px;background:#1a1a1a;border:1px solid var(--border);border-radius:8px;padding:6px 8px;align-items:center}
+  .extras label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--fg)}
+  .spacer{min-width:10px}
 
   /* ======= TABLA ======= */
   .panel{margin-top:12px}
@@ -69,34 +73,54 @@ Nogales Sonora</textarea>
     </div>
 
     <div class="cell">
-      <div class="head">Extract Lat & Log</div>
+      <div class="head">Lat &amp; Long</div>
       <div class="checkwrap"><input type="checkbox" id="includeLatLng" checked disabled></div>
     </div>
 
     <div class="cell">
-      <div class="head">Extract Email</div>
-      <div class="checkwrap"><input type="checkbox" id="extractEmail"></div>
-    </div>
-
-    <div class="cell">
-      <div class="head">Extract Website</div>
+      <div class="head">Website</div>
       <div class="checkwrap"><input type="checkbox" id="includeWebsite"></div>
     </div>
 
     <div class="cell">
-      <div class="head">Seg Max Email</div>
+      <div class="head">Email</div>
+      <div class="checkwrap"><input type="checkbox" id="extractEmail"></div>
+    </div>
+
+    <div class="cell">
+      <div class="head">Radio (km)</div>
+      <input type="number" id="radiusKm" min="0.1" max="50" step="0.1" value="5">
+    </div>
+
+    <div class="cell">
+      <div class="head">Seg máx. email</div>
       <input type="number" id="emailTimeoutTop" min="1" max="20" value="10">
     </div>
 
     <div class="cell">
+      <div class="head">Campos extra</div>
+      <div class="extras">
+        <label><input type="checkbox" id="tgHours"> Horario</label>
+        <label><input type="checkbox" id="tgPrice"> Precio</label>
+        <label><input type="checkbox" id="tgMaps"> Maps URI</label>
+        <label><input type="checkbox" id="tgPhoto"> Foto</label>
+        <label><input type="checkbox" id="tgTypes"> Tipo + Subtipos</label>
+        <label><input type="checkbox" id="tgShort"> Short Addr</label>
+        <label><input type="checkbox" id="tgSummary"> Resumen</label>
+      </div>
+    </div>
+
+    <div class="cell">
       <div class="head">&nbsp;</div>
-      <button class="btn primary" id="start">Iniciar Extracción</button>
+      <button class="btn primary" id="start">Iniciar extracción</button>
     </div>
 
     <div class="cell">
       <div class="head">&nbsp;</div>
       <button class="btn" id="export">Descargar</button>
     </div>
+
+    <div class="spacer"></div>
   </div>
 
   <!-- ====== RESULTADOS ====== -->
@@ -123,11 +147,18 @@ function escCSV(v){return '"'+toStr(v).replace(/"/g,'""')+'"'}
 
 function log(msg){
   const el=$("#log");
-  el.textContent = (el.textContent?el.textContent+"\n":"") + msg;
+  el.textContent=(el.textContent?el.textContent+"\\n":"")+msg;
   console.log("[ScrappingTool]", msg);
 }
-function setProgress(p){ const b=$("#bar"); if(b) b.style.width=Math.max(0,Math.min(100,p))+"%"; }
-function setComboProgress(p){ const b=$("#comboBar"); if(b) b.style.width=Math.max(0,Math.min(100,p))+"%"; }
+
+function buildPhotoUrl(photoName, apiKey, maxW=800, maxH=600){
+  if(!photoName || !apiKey) return "";
+  const base = `https://places.googleapis.com/v1/${encodeURIComponent(photoName)}/media`;
+  const params = new URLSearchParams({ key: apiKey });
+  if(maxW) params.set("maxWidthPx", String(maxW));
+  if(maxH) params.set("maxHeightPx", String(maxH));
+  return `${base}?${params.toString()}`;
+}
 
 /* ===== UI state ===== */
 const apiKey=$("#apiKey");
@@ -138,26 +169,63 @@ let includeEmail=false, includeWebsite=false, isRunning=false;
 $("#extractEmail").addEventListener("change",e=>{ includeEmail=e.target.checked; renderHeader(); renderBody(); });
 $("#includeWebsite").addEventListener("change",e=>{ includeWebsite=e.target.checked; });
 
+const toggles = {
+  hours: $("#tgHours").checked || false,
+  price: $("#tgPrice").checked || false,
+  maps:  $("#tgMaps").checked  || false,
+  photo: $("#tgPhoto").checked || false,
+  types: $("#tgTypes").checked || false,
+  short: $("#tgShort").checked || false,
+  summary: $("#tgSummary").checked || false
+};
+for(const id of Object.keys(toggles)){
+  $("#tg"+id.charAt(0).toUpperCase()+id.slice(1)).addEventListener("change", e=>{
+    toggles[id]=e.target.checked;
+    renderHeader(); renderBody();
+  });
+}
+
 /* ===== Tabla config ===== */
-const headersWantedBase=[
+const BASE_COLS = [
   "KW","Location","Company Name","Category","Website","Phone","email","address",
   "Postal Code + City","state","pin code","# Reviews","Review","CID","MapLink",
-  "Lat","Lng","Plus Code","Status","Types","Embed"
+  "Lat","Lng","Plus Code","Status","Embed"
 ];
-const COL_WIDTHS={
-  "KW":120,"Location":140,"Company Name":220,"Category":130,
-  "Website":180,"Phone":120,"email":220,"address":340,
-  "Postal Code + City":160,"state":120,"pin code":100,
-  "# Reviews":110,"Review":90,"CID":150,"MapLink":220,
-  "Lat":120,"Lng":120,"Plus Code":150,"Status":150,"Types":220,"Embed":220
+const EXTRA_COL_MAP = {
+  short : "Short Address",
+  price : "Price Level",
+  hours : "Open Now|Hours (week)",  // 2 columnas
+  maps  : "Maps URI",
+  photo : "PhotoURL",
+  types : "Primary Type (display)|Subtypes", // 2 columnas
+  summary: "Editorial Summary"
 };
+const DEFAULT_WIDTHS = {
+  "KW":120,"Location":140,"Company Name":220,"Category":130,
+  "Website":180,"Phone":120,"email":220,"address":340,"Short Address":180,
+  "Postal Code + City":160,"state":120,"pin code":100,
+  "# Reviews":110,"Review":90,"Price Level":110,"Open Now":110,"Hours (week)":220,
+  "CID":150,"MapLink":220,"Maps URI":220,
+  "Lat":120,"Lng":120,"Plus Code":150,"Status":150,
+  "Primary Type (display)":180,"Subtypes":240,"Editorial Summary":300,"PhotoURL":260,"Embed":220
+};
+const COL_WIDTHS = {...DEFAULT_WIDTHS};
 let rows=[];
 
 function currentHeaders(){
-  const h=[...headersWantedBase];
-  if(!includeEmail){ const i=h.indexOf("email"); if(i>-1) h.splice(i,1); }
-  return h;
+  const cols=[...BASE_COLS];
+  if(toggles.short) cols.splice(cols.indexOf("Postal Code + City"), 0, "Short Address");
+  if(toggles.price) cols.splice(cols.indexOf("CID"), 0, "Price Level");
+  if(toggles.hours) cols.splice(cols.indexOf("CID"), 0, "Open Now", "Hours (week)");
+  if(toggles.maps) cols.splice(cols.indexOf("Lat"), 0, "Maps URI");
+  if(toggles.photo) cols.splice(cols.indexOf("Embed"), 0, "PhotoURL");
+  if(toggles.types) cols.splice(cols.indexOf("Status"), 0, "Primary Type (display)","Subtypes");
+  if(toggles.summary) cols.splice(cols.indexOf("PhotoURL")>-1?cols.indexOf("PhotoURL"):cols.indexOf("Embed"), 0, "Editorial Summary");
+  if(!includeEmail){ const i=cols.indexOf("email"); if(i>-1) cols.splice(i,1); }
+  if(!includeWebsite){ const i=cols.indexOf("Website"); if(i>-1) cols.splice(i,1); }
+  return cols;
 }
+
 function renderColGroup(){
   const table=$("#table");
   let cg=table.querySelector("colgroup"); if(cg) cg.remove();
@@ -221,29 +289,54 @@ renderHeader(); renderBody();
 /* ===== Export ===== */
 $("#export").addEventListener("click",()=>{
   if(!rows.length){ alert("No hay filas."); return; }
-  const cols=Object.keys(rows[0]);
+  const cols=currentHeaders();
   const csv=[ cols.map(escCSV).join(",") ];
-  for(const r of rows){ csv.push( cols.map(h=>escCSV(r[h])).join(",") ); }
+  for(const r of rows){ csv.push( cols.map(h=>escCSV(r[h]??"")).join(",") ); }
   const blob=new Blob([csv.join("\n")],{type:"text/csv;charset=utf-8;"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a"); a.href=url; a.download="resultados-scrapping.csv"; document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 });
 
-/* ===== Google Places (Text Search API NEW) ===== */
+/* ===== FieldMask dinámico según toggles ===== */
+function buildFieldMask(){
+  const fm = [
+    "places.id",
+    "places.displayName",
+    "places.primaryType",
+    "places.types",
+    "places.formattedAddress",
+    "places.addressComponents",
+    "places.location",
+    "places.plusCode",
+    "places.businessStatus",
+    "places.nationalPhoneNumber",
+    "places.internationalPhoneNumber",
+    "places.rating",
+    "places.userRatingCount"
+  ];
+  if(toggles.short) fm.push("places.shortFormattedAddress");
+  if(toggles.price) fm.push("places.priceLevel");
+  if(toggles.maps)  fm.push("places.googleMapsUri");
+  if(toggles.hours){
+    fm.push("places.currentOpeningHours.openNow","places.currentOpeningHours.weekdayDescriptions");
+  }
+  if(toggles.types){
+    fm.push("places.primaryTypeDisplayName","places.subtypes");
+  }
+  if(toggles.summary) fm.push("places.editorialSummary");
+  if(toggles.photo)   fm.push("places.photos.name");
+  fm.push("nextPageToken");
+  return fm.join(",");
+}
+
+/* ===== Google Places: Text Search ===== */
 async function textSearchAll({apiKey,textQuery,center,radius=5000,language="es"}){
   const url="https://places.googleapis.com/v1/places:searchText";
   const headers={
     "Content-Type":"application/json",
     "X-Goog-Api-Key":apiKey,
-    "X-Goog-FieldMask":[
-      "places.id","places.displayName","places.formattedAddress","places.location",
-      "places.primaryType","places.types",
-      "places.nationalPhoneNumber","places.internationalPhoneNumber",
-      "places.rating","places.userRatingCount",
-      "places.addressComponents","places.plusCode","places.businessStatus",
-      "nextPageToken"
-    ].join(",")
+    "X-Goog-FieldMask": buildFieldMask()
   };
   const out=[]; let pageToken=null;
   do{
@@ -257,6 +350,7 @@ async function textSearchAll({apiKey,textQuery,center,radius=5000,language="es"}
   }while(pageToken);
   return out;
 }
+
 async function geocodeAddress(geocoder, address){
   try{
     const { results } = await geocoder.geocode({ address });
@@ -267,6 +361,7 @@ async function geocodeAddress(geocoder, address){
     return null;
   }catch{ return null; }
 }
+
 async function tryExtractEmail(url, timeoutMs){
   const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),timeoutMs);
   try{
@@ -297,8 +392,11 @@ async function start(){
     if(!keywords.length || !locations.length){ alert("Agrega al menos 1 keyword y 1 ubicación."); return; }
 
     const emailTimeout=Math.max(1,Math.min(20,parseInt($("#emailTimeoutTop").value,10)||10));
+    const radiusKm=Math.max(0.1,Math.min(50,parseFloat($("#radiusKm").value)||5));
+    const radiusMeters=Math.round(radiusKm*1000);
     const language="es";
-    rows=[]; renderBody(); setProgress(0); setComboProgress(0);
+
+    rows=[]; renderHeader(); renderBody();
 
     const { Place } = await google.maps.importLibrary("places");
     const geocoder=new google.maps.Geocoder();
@@ -306,13 +404,13 @@ async function start(){
     let combo=0, total=keywords.length*locations.length;
     for(const kw of keywords){
       for(const loc of locations){
-        combo++; log(`(${combo}/${total}) ${kw} @ ${loc}`);
+        combo++; log(`(${combo}/${total}) ${kw} @ ${loc} (radio ${radiusKm} km)`);
 
         const center=await geocodeAddress(geocoder, loc);
         if(!center){ log(`No se pudo geocodificar: ${loc}`); continue; }
 
         let places=[];
-        try{ places=await textSearchAll({apiKey:key,textQuery:kw,center,radius:5000,language}); }
+        try{ places=await textSearchAll({apiKey:key,textQuery:kw,center,radius:radiusMeters,language}); }
         catch(err){ log(`Error "${kw}" @ "${loc}": ${err?.message||err}`); continue; }
 
         let i=0;
@@ -332,29 +430,56 @@ async function start(){
           const mapLink="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent((name||" ")+" "+(p.formattedAddress||""));
           const embed="https://www.google.com/maps?q="+encodeURIComponent((name||" ")+" "+(p.formattedAddress||""))+"&output=embed";
 
+          /* Campos extra */
+          const shortAddr   = toggles.short  ? (p.shortFormattedAddress || "") : "";
+          const priceLevel  = toggles.price  ? (p.priceLevel ?? "")+"" : "";
+          const mapsUri     = toggles.maps   ? (p.googleMapsUri || "") : "";
+          const openNow     = toggles.hours  ? (p.currentOpeningHours?.openNow===true ? "yes" : (p.currentOpeningHours?.openNow===false ? "no" : "")) : "";
+          const hoursWeek   = toggles.hours  ? (p.currentOpeningHours?.weekdayDescriptions||[]).join(" | ") : "";
+          const typeDisp    = toggles.types  ? (p.primaryTypeDisplayName || "") : "";
+          const subTypes    = toggles.types  ? (Array.isArray(p.subtypes)?p.subtypes.join("|"):"") : "";
+          const summary     = toggles.summary? (p.editorialSummary?.overview || "") : "";
+          let photoUrl = "";
+          if(toggles.photo){
+            const photos = Array.isArray(p.photos) ? p.photos : [];
+            const firstPhotoName = photos[0]?.name || "";
+            photoUrl = buildPhotoUrl(firstPhotoName, key, 800, 600);
+          }
+
+          /* Website + Email (vía detail fetch sólo si se requieren) */
           let websiteUri="";
           if(includeWebsite || includeEmail){
-            try{ const detail=new Place({id:p.id,requestedLanguage:language,region:"mx"}); await detail.fetchFields({fields:["websiteUri"]}); websiteUri=detail.websiteUri||""; }
-            catch(_){}
+            try{
+              const detail=new Place({id:p.id,requestedLanguage:language,region:"mx"});
+              await detail.fetchFields({fields:["websiteUri"]});
+              websiteUri=detail.websiteUri||"";
+            }catch(_){}
           }
           let email="";
-          if(includeEmail && websiteUri){ try{ email=await tryExtractEmail(websiteUri,emailTimeout*1000);}catch(_){ email=""; } }
+          if(includeEmail && websiteUri){
+            try{ email=await tryExtractEmail(websiteUri,emailTimeout*1000);}catch(_){ email=""; }
+          }
 
           rows.push({
             "KW":kw,"Location":loc,"Company Name":name,
             "Category":p.primaryType||(p.types?p.types[0]:""),
             "Website":websiteUri||"","Phone":phone,"email":email,"address":p.formattedAddress||"",
+            "Short Address": shortAddr,
             "Postal Code + City":(postal?postal+" ":"")+(city||""),"state":state||"","pin code":postal||"",
-            "# Reviews":p.userRatingCount??"","Review":p.rating??"","CID":"",
-            "MapLink":mapLink,"Lat":(p.location&&(p.location.lat??p.location.latitude))??"",
+            "# Reviews":p.userRatingCount??"","Review":p.rating??"","Price Level":priceLevel,
+            "Open Now":openNow,"Hours (week)":hoursWeek,
+            "CID":"",
+            "MapLink":mapLink,"Maps URI":mapsUri,
+            "Lat":(p.location&&(p.location.lat??p.location.latitude))??"",
             "Lng":(p.location&&(p.location.lng??p.location.longitude))??"",
             "Plus Code":(p.plusCode?.compoundCode||p.plusCode?.globalCode||""),
-            "Status":p.businessStatus||"","Types":Array.isArray(p.types)?p.types.join("|"):"",
+            "Status":p.businessStatus||"",
+            "Primary Type (display)": typeDisp, "Subtypes": subTypes,
+            "Editorial Summary": summary, "PhotoURL": photoUrl,
             "Embed":embed
           });
 
           if(i%5===0) renderBody();
-          setProgress(Math.min(100,Math.round((i/Math.max(1,places.length))*100)));
         }
         renderBody();
       }
