@@ -5,101 +5,80 @@
   <title>Scrapping Tool — Google Places</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Tus hojas de estilo (déjalas si ya las tienes en el repo) -->
-  <link rel="stylesheet" href="./assets/css/scrapping-tool.css?v=8">
-  <link rel="stylesheet" href="./assets/css/utilities.css?v=8">
-  <link rel="stylesheet" href="./assets/css/print.css?v=8" media="print">
+  <!-- tus CSS (déjalos si ya existen en tu repo) -->
+  <link rel="stylesheet" href="./assets/css/scrapping-tool.css?v=9">
+  <link rel="stylesheet" href="./assets/css/utilities.css?v=9">
+  <link rel="stylesheet" href="./assets/css/print.css?v=9" media="print">
 
-  <!-- Ajustes específicos (barra unificada + tabla resizable + búsqueda corta) -->
   <style>
-    :root{
-      --panel: #121212;
-      --border: #2a2a2a;
-    }
+    :root{ --panel:#121212; --border:#2a2a2a; }
 
-    /* Layout base (si ya lo tienes en tus CSS, esto sólo refuerza) */
-    .app{ display:grid; grid-template-columns: 340px 1fr; gap:16px; padding:14px; }
-    aside{ background: var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px; }
+    .app{ display:grid; grid-template-columns:340px 1fr; gap:16px; padding:14px; }
+    aside{ background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px; }
     main{ min-width:0; }
 
-    /* -------- Toolbar unificada -------- */
+    /* ====== BARRA SUPERIOR UNIFICADA ====== */
     .toolbar{
-      position: sticky; top: 0; z-index: 5;
-      display: flex; align-items: center; gap: 14px;
-      flex-wrap: wrap; padding: 10px 12px;
-      background: var(--panel); border: 1px solid var(--border);
-      border-radius: 10px; margin-bottom: 12px;
+      position:sticky; top:0; z-index:5;
+      display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+      padding:10px 12px; background:var(--panel); border:1px solid var(--border);
+      border-radius:10px; margin-bottom:12px;
     }
     .tgroup{ display:flex; align-items:center; gap:12px; }
+    .ctrl{ display:flex; flex-direction:column; align-items:flex-start; gap:6px; min-width:max-content; }
+    .ctrl .caption{ font-size:11px; opacity:.8; line-height:1; margin-left:2px; }
+    .ctrl .inline{ display:flex; align-items:center; gap:8px; }
 
     .pill{
       display:inline-flex; align-items:center; gap:8px;
-      background: rgba(255,255,255,.06); border:1px solid var(--border);
+      background:rgba(255,255,255,.06); border:1px solid var(--border);
       padding:6px 10px; border-radius:999px; font-size:13px;
     }
-    .pill .dot{ width:8px;height:8px;border-radius:50%; background:#1dd75b; display:inline-block; }
+    .pill .dot{ width:8px; height:8px; border-radius:50%; background:#1dd75b; display:inline-block; }
 
-    .progress{ height: 8px; background: rgba(255,255,255,.06); border-radius: 999px; overflow: hidden; }
-    .progress > div{ height:100%; width:0%; background:#1dd75b; transition:width .25s; }
+    .progress{ height:8px; background:rgba(255,255,255,.06); border-radius:999px; overflow:hidden; }
+    .progress>div{ height:100%; width:0%; background:#1dd75b; transition:width .25s; }
     .progress.slim{ height:6px; }
 
     .badge{
-      min-width:36px;height:36px;border-radius:10px; display:flex; align-items:center; justify-content:center;
-      background:#0f1b2a; color:white; font-weight:700; border:1px solid var(--border);
+      min-width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+      background:#0f1b2a; color:#fff; font-weight:700; border:1px solid var(--border);
     }
-
     .checkpill{
       display:inline-flex; align-items:center; gap:6px;
-      background: rgba(255,255,255,.06); border:1px solid var(--border);
-      padding:6px 10px; border-radius:999px; font-size:13px; user-select:none;
+      background:rgba(255,255,255,.06); border:1px solid var(--border);
+      padding:6px 10px; border-radius:999px; font-size:13px;
     }
-
-    /* Controles con título */
-    .ctrl{
-      display:flex; flex-direction:column; align-items:flex-start; gap:6px;
-      min-width:max-content;
-    }
-    .ctrl .caption{
-      font-size:11px; opacity:.8; line-height:1; margin-left:2px;
-    }
-    .ctrl .inline{ display:flex; align-items:center; gap:8px; }
-
-    /* Botones/inputs utilitarios */
     .btn{ background:#2b2b2b; border:1px solid var(--border); color:#fff; padding:8px 12px; border-radius:10px; }
     .btn.primary{ background:#1db954; border-color:#17a84a; color:#0b120e; font-weight:700; }
     .btn:disabled{ opacity:.6; cursor:not-allowed; }
 
-    .searchbox{ width: 360px; flex: 0 0 360px; padding:8px 10px; border-radius:10px; border:1px solid var(--border); background:#1a1a1a; color:#fff; }
-    .tiny{ width: 64px; padding: 6px 8px; text-align:center; font-variant-numeric: tabular-nums;
+    /* buscador CORTO (ajustable) */
+    .searchbox{ width:300px; flex:0 0 300px; padding:8px 10px; border-radius:10px; border:1px solid var(--border); background:#1a1a1a; color:#fff; }
+
+    .tiny{ width:64px; padding:6px 8px; text-align:center; font-variant-numeric:tabular-nums;
            border-radius:10px; border:1px solid var(--border); background:#1a1a1a; color:#fff; }
+    .help{ display:inline-block; width:16px; height:16px; border-radius:50%; text-align:center; line-height:16px; font-size:12px; margin-left:6px; background:rgba(255,255,255,.12); cursor:help; }
 
-    .help{
-      display:inline-block; width:16px; height:16px; border-radius:50%;
-      text-align:center; line-height:16px; font-size:12px; margin-left:6px;
-      background:rgba(255,255,255,.12); cursor:help;
-    }
-
-    /* -------- Tabla (anchos fijos + resizer) -------- */
-    #table{ table-layout: fixed; width:100%; border-collapse: separate; border-spacing:0; }
-    #table th, #table td{ overflow:hidden; text-overflow: ellipsis; white-space: nowrap; padding:8px 10px; }
+    /* ====== TABLA ====== */
+    #table{ table-layout:fixed; width:100%; border-collapse:separate; border-spacing:0; }
+    #table th,#table td{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:8px 10px; }
     #thead th{ position:relative; background:#161616; }
     .col-resizer{ position:absolute; top:0; right:0; bottom:0; width:6px; cursor:col-resize; user-select:none; }
-    .col-resizer:hover{ background: rgba(255,255,255,.06); }
+    .col-resizer:hover{ background:rgba(255,255,255,.06); }
 
-    /* Inputs laterales */
-    aside input, aside textarea{
-      width:100%; border:1px solid var(--border); border-radius:10px; background:#1a1a1a; color:#fff;
-      padding:10px; outline:none;
-    }
-    aside textarea{ min-height:120px; resize: vertical; }
-
-    /* Hints */
+    /* inputs laterales */
+    aside input, aside textarea{ width:100%; border:1px solid var(--border); border-radius:10px; background:#1a1a1a; color:#fff; padding:10px; outline:none; }
+    aside textarea{ min-height:120px; resize:vertical; }
     .hint{ font-size:12px; opacity:.8; }
+
+    /* ====== KILL SWITCH por si quedan restos viejos ====== */
+    .search-block, .action-block{ display:none !important; }
   </style>
 </head>
 <body>
   <div class="app">
-    <!-- ======== LATERAL (limpio) ======== -->
+    <!-- ===== LATERAL ===== -->
     <aside>
       <h1>Scrapping Tool</h1>
       <p class="hint" style="margin-bottom:12px">Google Maps — <b>Places API (New)</b> + Maps JS</p>
@@ -117,11 +96,10 @@ Nogales Sonora</textarea>
       <p class="hint">Origen: <span id="origin"></span></p>
     </aside>
 
-    <!-- ======== MAIN ======== -->
+    <!-- ===== MAIN ===== -->
     <main>
-      <!-- ===== Barra unificada con títulos ===== -->
+      <!-- === BARRA UNICA ARRIBA === -->
       <div class="toolbar">
-        <!-- Pill + progreso de combinaciones -->
         <div class="tgroup" id="comboGroup">
           <div class="pill" id="statusPill" title="Combinación actual (Keyword en Ubicación)">
             <span class="dot"></span>
@@ -129,13 +107,10 @@ Nogales Sonora</textarea>
           </div>
           <div class="ctrl">
             <span class="caption">Progreso combinaciones <span id="comboProgress">(0/0)</span></span>
-            <div class="progress slim" aria-label="Progreso de combinaciones">
-              <div id="comboBar"></div>
-            </div>
+            <div class="progress slim" aria-label="Progreso de combinaciones"><div id="comboBar"></div></div>
           </div>
         </div>
 
-        <!-- Contador de resultados -->
         <div class="tgroup" id="resultsGroup">
           <div class="ctrl">
             <span class="caption">Resultados</span>
@@ -143,13 +118,12 @@ Nogales Sonora</textarea>
               <div class="badge" title="Resultados visibles/filtrados"><span id="count">0</span></div>
               <div>
                 <div style="font-weight:700; font-size:12px; opacity:.85">ENCONTRADOS</div>
-                <div class="progress" aria-label="Progreso de lectura de página"><div id="bar"></div></div>
+                <div class="progress" aria-label="Progreso de lectura"><div id="bar"></div></div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Acciones -->
         <div class="ctrl">
           <span class="caption">Datos</span>
           <button class="btn" id="clear" title="Limpiar resultados y log">Limpiar Datos</button>
@@ -174,8 +148,8 @@ Nogales Sonora</textarea>
         <div class="ctrl">
           <span class="caption">Segundos máx. email</span>
           <input class="tiny" id="emailTimeoutTop" value="10"
-                aria-label="Segundos máximos para extraer email"
-                title="Segundos máximos para intentar extraer email"/>
+                 aria-label="Segundos máximos para extraer email"
+                 title="Segundos máximos para intentar extraer email"/>
         </div>
 
         <div class="ctrl">
@@ -183,9 +157,9 @@ Nogales Sonora</textarea>
           <button class="btn" id="export" title="Descargar resultados en CSV">Descargar</button>
         </div>
 
-        <div class="ctrl" style="min-width: 260px">
+        <div class="ctrl" style="min-width:240px">
           <span class="caption">Buscar</span>
-          <input class="searchbox" id="globalSearch" placeholder="Buscar..." aria-label="Buscar en los resultados" />
+          <input class="searchbox" id="globalSearch" placeholder="Buscar..." aria-label="Buscar en los resultados"/>
         </div>
 
         <div class="ctrl">
@@ -210,284 +184,167 @@ Nogales Sonora</textarea>
 
   <script>
   "use strict";
+  const $=(s,r=document)=>r.querySelector(s); const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  $("#origin").textContent=location.origin;
 
-  // ---------------- Utilidades ----------------
-  const $  = (s, r=document)=>r.querySelector(s);
-  const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
+  const apiKey=$("#apiKey");
+  apiKey.value=localStorage.getItem('st_api_key')||""; apiKey.addEventListener('change',()=>localStorage.setItem('st_api_key',apiKey.value));
 
-  $("#origin").textContent = location.origin;
-
-  const apiKey = $("#apiKey");
-  apiKey.value = localStorage.getItem('st_api_key') || "";
-  apiKey.addEventListener('change', () => localStorage.setItem('st_api_key', apiKey.value));
-
-  const headersWantedBase = [
+  const headersWantedBase=[
     "KW","Location","Company Name","Category","Website","Phone","email","address",
     "Postal Code + City","state","pin code","# Reviews","Review","CID","MapLink",
-    "Lat","Lng",
-    "Plus Code","Status","Types","Embed"
+    "Lat","Lng","Plus Code","Status","Types","Embed"
   ];
-
-  const COL_WIDTHS = {
-    "KW": 120, "Location": 140, "Company Name": 220, "Category": 130,
-    "Website": 180, "Phone": 120, "email": 220, "address": 340,
-    "Postal Code + City": 160, "state": 120, "pin code": 100,
-    "# Reviews": 110, "Review": 90, "CID": 150, "MapLink": 220,
-    "Lat": 120, "Lng": 120,
-    "Plus Code": 150, "Status": 150, "Types": 220, "Embed": 220
+  const COL_WIDTHS={
+    "KW":120,"Location":140,"Company Name":220,"Category":130,
+    "Website":180,"Phone":120,"email":220,"address":340,
+    "Postal Code + City":160,"state":120,"pin code":100,
+    "# Reviews":110,"Review":90,"CID":150,"MapLink":220,
+    "Lat":120,"Lng":120,"Plus Code":150,"Status":150,"Types":220,"Embed":220
   };
 
-  let rows = [];
-  let includeEmail   = false;
-  let includeWebsite = false;
-  let isRunning = false;
-
-  function toStr(v){ return v==null ? "" : String(v); }
-  function escCSV(v){ return '"' + toStr(v).replace(/"/g,'""') + '"'; }
-  function downloadCSV(name, data){
-    if(!data.length){ alert("No hay filas."); return; }
-    const cols = Object.keys(data[0]);
-    const lines = [cols.map(escCSV).join(",")];
-    for(const r of data) lines.push(cols.map(h=>escCSV(r[h])).join(","));
-    const blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8;"});
-    const url = URL.createObjectURL(blob);
-    const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
+  let rows=[]; let includeEmail=false; let includeWebsite=false; let isRunning=false;
+  function toStr(v){return v==null?"":String(v);} function escCSV(v){return '"'+toStr(v).replace(/"/g,'""')+'"';}
+  function downloadCSV(name,data){ if(!data.length){alert("No hay filas.");return;}
+    const cols=Object.keys(data[0]); const out=[cols.map(escCSV).join(",")];
+    for(const r of data) out.push(cols.map(h=>escCSV(r[h])).join(",")); const blob=new Blob([out.join("\n")],{type:"text/csv;charset=utf-8;"});
+    const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   }
-  function log(m){ const el=$("#log"); el.textContent = (el.textContent?el.textContent+"\n":"")+m; console.log("[ScrappingTool]",m); }
-  function setProgress(p){ $("#bar").style.width = Math.max(0,Math.min(100,p)) + "%"; }
-  function setComboProgress(p){ $("#comboBar").style.width = Math.max(0,Math.min(100,p)) + "%"; }
+  function log(m){const el=$("#log"); el.textContent=(el.textContent?el.textContent+"\n":"")+m; console.log("[ScrappingTool]",m);}
+  function setProgress(p){$("#bar").style.width=Math.max(0,Math.min(100,p))+"%";}
+  function setComboProgress(p){$("#comboBar").style.width=Math.max(0,Math.min(100,p))+"%";}
   function updateCounters(){
-    const k = $("#keywords").value.split("\n").map(s=>s.trim()).filter(Boolean).length;
-    const l = $("#locations").value.split("\n").map(s=>s.trim()).filter(Boolean).length;
-    $("#kwLabel").textContent = `Keywords (${k})`;
-    $("#locLabel").textContent = `Ubicaciones (${l})`;
-  }
-  $("#keywords").addEventListener("input", updateCounters);
-  $("#locations").addEventListener("input", updateCounters);
-  updateCounters();
+    const k=$("#keywords").value.split("\n").map(s=>s.trim()).filter(Boolean).length;
+    const l=$("#locations").value.split("\n").map(s=>s.trim()).filter(Boolean).length;
+    $("#kwLabel").textContent=`Keywords (${k})`; $("#locLabel").textContent=`Ubicaciones (${l})`;
+  } $("#keywords").addEventListener("input",updateCounters); $("#locations").addEventListener("input",updateCounters); updateCounters();
 
-  function currentHeaders(){
-    const h = [...headersWantedBase];
-    if (!includeEmail) { const i = h.indexOf("email"); if (i > -1) h.splice(i, 1); }
-    return h;
-  }
+  function currentHeaders(){ const h=[...headersWantedBase]; if(!includeEmail){ const i=h.indexOf("email"); if(i>-1) h.splice(i,1);} return h; }
 
-  // ------- colgroup + resizer -------
   function renderColGroup(){
-    const table = document.getElementById("table");
-    let colgroup = table.querySelector("colgroup");
-    if (colgroup) colgroup.remove();
-    colgroup = document.createElement("colgroup");
-    currentHeaders().forEach(h=>{
-      const col = document.createElement("col");
-      col.style.width = (COL_WIDTHS[h] || 160) + "px";
-      colgroup.appendChild(col);
-    });
-    table.insertBefore(colgroup, table.firstChild);
+    const table=document.getElementById("table"); let colgroup=table.querySelector("colgroup"); if(colgroup) colgroup.remove();
+    colgroup=document.createElement("colgroup");
+    currentHeaders().forEach(h=>{ const col=document.createElement("col"); col.style.width=(COL_WIDTHS[h]||160)+"px"; colgroup.appendChild(col); });
+    table.insertBefore(colgroup,table.firstChild);
   }
   function makeHeadersResizable(){
-    const table = document.getElementById("table");
-    const colgroup = table.querySelector("colgroup");
-    const cols = colgroup ? Array.from(colgroup.children) : [];
-    const ths = Array.from(document.querySelectorAll("#thead tr:first-child th"));
-    ths.forEach((th, i)=>{
-      let grip = th.querySelector(".col-resizer");
-      if (!grip) { grip = document.createElement("span"); grip.className = "col-resizer"; th.appendChild(grip); }
-      else { const clone = grip.cloneNode(true); grip.replaceWith(clone); grip = clone; }
-      grip.addEventListener("mousedown", (ev)=>{
-        ev.preventDefault();
-        const startX = ev.pageX;
-        const startW = parseInt((cols[i].style.width || th.offsetWidth) + "", 10) || th.offsetWidth;
-        function onMove(e){
-          const delta = e.pageX - startX;
-          const newW = Math.max(60, startW + delta);
-          cols[i].style.width = newW + "px";
-          const head = currentHeaders()[i]; if (head) COL_WIDTHS[head] = newW;
-        }
-        function onUp(){ document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); }
-        document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp);
+    const table=document.getElementById("table"); const colgroup=table.querySelector("colgroup");
+    const cols=colgroup?Array.from(colgroup.children):[]; const ths=Array.from(document.querySelectorAll("#thead tr:first-child th"));
+    ths.forEach((th,i)=>{
+      let grip=th.querySelector(".col-resizer");
+      if(!grip){grip=document.createElement("span"); grip.className="col-resizer"; th.appendChild(grip);}
+      else{const clone=grip.cloneNode(true); grip.replaceWith(clone); grip=clone;}
+      grip.addEventListener("mousedown",(ev)=>{
+        ev.preventDefault(); const startX=ev.pageX; const startW=parseInt((cols[i].style.width||th.offsetWidth)+"",10)||th.offsetWidth;
+        function onMove(e){ const nw=Math.max(60,startW+(e.pageX-startX)); cols[i].style.width=nw+"px"; const head=currentHeaders()[i]; if(head) COL_WIDTHS[head]=nw; }
+        function onUp(){document.removeEventListener("mousemove",onMove); document.removeEventListener("mouseup",onUp);}
+        document.addEventListener("mousemove",onMove); document.addEventListener("mouseup",onUp);
       });
     });
   }
-
   function renderHeader(){
-    renderColGroup();
-    const thead=$("#thead"); thead.innerHTML="";
-    const tr1=document.createElement("tr"), tr2=document.createElement("tr");
-    currentHeaders().forEach(h=>{
-      const th=document.createElement("th"); th.textContent=h; tr1.appendChild(th);
-      const th2=document.createElement("th");
-      const inp=document.createElement("input"); inp.placeholder="filtrar…"; inp.dataset.col=h; inp.addEventListener("input",renderBody);
-      th2.appendChild(inp); tr2.appendChild(th2);
-    });
-    thead.appendChild(tr1); thead.appendChild(tr2);
-    makeHeadersResizable();
+    renderColGroup(); const thead=$("#thead"); thead.innerHTML=""; const tr1=document.createElement("tr"), tr2=document.createElement("tr");
+    currentHeaders().forEach(h=>{ const th=document.createElement("th"); th.textContent=h; tr1.appendChild(th);
+      const th2=document.createElement("th"); const inp=document.createElement("input"); inp.placeholder="filtrar…"; inp.dataset.col=h; inp.addEventListener("input",renderBody); th2.appendChild(inp); tr2.appendChild(th2); });
+    thead.appendChild(tr1); thead.appendChild(tr2); makeHeadersResizable();
   }
-
   function renderBody(){
-    const tbody=$("#tbody"); tbody.innerHTML="";
-    const filters={}; $$("#thead input").forEach(i=>{ const v=i.value.trim().toLowerCase(); if(v) filters[i.dataset.col]=v; });
-    const cols = currentHeaders();
-    const data = rows.map(r=>{ const pruned={}; cols.forEach(c=>pruned[c]=r[c]??""); return pruned; })
-      .filter(r=>{ for(const k in filters){ if(!toStr(r[k]).toLowerCase().includes(filters[k])) return false; } return true; });
-
-    for(const r of data){
-      const tr=document.createElement("tr");
-      cols.forEach(h=>{ const td=document.createElement("td"); td.textContent=toStr(r[h]??""); tr.appendChild(td); });
-      tbody.appendChild(tr);
-    }
-    $("#count").textContent = data.length;
+    const tbody=$("#tbody"); tbody.innerHTML=""; const filters={}; $$("#thead input").forEach(i=>{const v=i.value.trim().toLowerCase(); if(v) filters[i.dataset.col]=v;});
+    const cols=currentHeaders(); const data=rows.map(r=>{const pruned={}; cols.forEach(c=>pruned[c]=r[c]??""); return pruned;})
+      .filter(r=>{for(const k in filters){ if(!toStr(r[k]).toLowerCase().includes(filters[k])) return false;} return true;});
+    for(const r of data){ const tr=document.createElement("tr"); cols.forEach(h=>{ const td=document.createElement("td"); td.textContent=toStr(r[h]??""); tr.appendChild(td);}); tbody.appendChild(tr);}
+    $("#count").textContent=data.length;
   }
-
   $("#clear").addEventListener("click",()=>{ rows=[]; $("#log").textContent=""; $("#count").textContent="0"; setProgress(0); setComboProgress(0); renderBody(); });
-  $("#export").addEventListener("click",()=> downloadCSV("resultados-scrapping.csv", rows));
-  $("#globalSearch").addEventListener("input", e=>{
+  $("#export").addEventListener("click",()=>downloadCSV("resultados-scrapping.csv",rows));
+  $("#globalSearch").addEventListener("input",e=>{
     const term=e.target.value.trim().toLowerCase(); $$("#thead input").forEach(i=>i.value="");
-    const tbody=$("#tbody"); tbody.innerHTML="";
-    const cols = currentHeaders();
-    const data = term? rows.filter(r=>Object.values(r).some(v=>toStr(v).toLowerCase().includes(term))) : rows;
-    for(const r of data){
-      const tr=document.createElement("tr");
-      cols.forEach(h=>{ const td=document.createElement("td"); td.textContent=toStr(r[h]??""); tr.appendChild(td); });
-      tbody.appendChild(tr);
-    }
+    const tbody=$("#tbody"); tbody.innerHTML=""; const cols=currentHeaders();
+    const data=term?rows.filter(r=>Object.values(r).some(v=>toStr(v).toLowerCase().includes(term))):rows;
+    for(const r of data){ const tr=document.createElement("tr"); cols.forEach(h=>{ const td=document.createElement("td"); td.textContent=toStr(r[h]??""); tr.appendChild(td);}); tbody.appendChild(tr);}
     $("#count").textContent=data.length;
   });
-
-  $("#extractEmail").addEventListener("change", e=>{ includeEmail = e.target.checked; renderHeader(); renderBody(); });
-  $("#includeWebsite").addEventListener("change", e=>{ includeWebsite = e.target.checked; });
+  $("#extractEmail").addEventListener("change",e=>{includeEmail=e.target.checked; renderHeader(); renderBody();});
+  $("#includeWebsite").addEventListener("change",e=>{includeWebsite=e.target.checked;});
 
   renderHeader(); renderBody();
 
-  // ---------------- Places API: Text Search (paginado) ----------------
-  async function textSearchAll({ apiKey, textQuery, center, radius = 5000, language = "es" }) {
-    const url = "https://places.googleapis.com/v1/places:searchText";
-    const headers = {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": [
-        "places.id",
-        "places.displayName",
-        "places.formattedAddress",
-        "places.location",
-        "places.primaryType",
-        "places.types",
-        "places.nationalPhoneNumber",
-        "places.internationalPhoneNumber",
-        "places.rating",
-        "places.userRatingCount",
-        "places.addressComponents",
-        "places.plusCode",
-        "places.businessStatus",
-        "nextPageToken"
+  async function textSearchAll({apiKey,textQuery,center,radius=5000,language="es"}){
+    const url="https://places.googleapis.com/v1/places:searchText";
+    const headers={
+      "Content-Type":"application/json",
+      "X-Goog-Api-Key":apiKey,
+      "X-Goog-FieldMask":[
+        "places.id","places.displayName","places.formattedAddress","places.location",
+        "places.primaryType","places.types","places.nationalPhoneNumber","places.internationalPhoneNumber",
+        "places.rating","places.userRatingCount","places.addressComponents","places.plusCode","places.businessStatus","nextPageToken"
       ].join(",")
     };
-    let pageToken = null;
-    const results = [];
-    do {
-      const body = {
-        textQuery,
-        languageCode: language,
-        locationBias: { circle: { center: { latitude: center.lat, longitude: center.lng }, radius } },
-        pageSize: 20,
-        pageToken
-      };
-      const res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
-      if (!res.ok) { const t = await res.text().catch(()=>String(res.status)); throw new Error(`HTTP ${res.status} en places:searchText: ${t}`); }
-      const data = await res.json();
-      results.push(...(data.places || []));
-      pageToken = data.nextPageToken || null;
-      if (pageToken) await new Promise(r=>setTimeout(r, 300));
-    } while (pageToken);
+    let pageToken=null; const results=[];
+    do{
+      const body={ textQuery, languageCode:language, locationBias:{circle:{center:{latitude:center.lat,longitude:center.lng},radius}}, pageSize:20, pageToken };
+      const res=await fetch(url,{method:"POST",headers,body:JSON.stringify(body)});
+      if(!res.ok){const t=await res.text().catch(()=>String(res.status)); throw new Error(`HTTP ${res.status} en places:searchText: ${t}`);}
+      const data=await res.json(); results.push(...(data.places||[])); pageToken=data.nextPageToken||null;
+      if(pageToken) await new Promise(r=>setTimeout(r,300));
+    }while(pageToken);
     return results;
   }
 
-  // ---------------- Geocoder + helpers ----------------
-  async function geocodeAddress(geocoder, address){
-    try{
-      const { results } = await geocoder.geocode({ address });
-      if (results && results[0]){
-        const { lat, lng } = results[0].geometry.location;
-        return { lat: lat(), lng: lng() };
-      }
-      return null;
-    }catch{ return null; }
+  async function geocodeAddress(geocoder,address){
+    try{ const {results}=await geocoder.geocode({address}); if(results&&results[0]){ const {lat,lng}=results[0].geometry.location; return {lat:lat(),lng:lng()}; } return null; }
+    catch{ return null; }
+  }
+  async function tryExtractEmail(url,ms){
+    const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),ms);
+    try{ const res=await fetch(url,{mode:"cors",signal:ctrl.signal}); const text=await res.text(); const m=text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i); return m?m[0]:""; }
+    catch{ return ""; } finally{ clearTimeout(to); }
   }
 
-  async function tryExtractEmail(url, timeoutMs){
-    const ctrl = new AbortController();
-    const to = setTimeout(()=>ctrl.abort(), timeoutMs);
-    try{
-      const res = await fetch(url, { mode:"cors", signal: ctrl.signal });
-      const text = await res.text();
-      const m = text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
-      return m ? m[0] : "";
-    }catch{ return ""; } finally { clearTimeout(to); }
-  }
-
-  // Mini-parches: errores y anti doble-clic
-  window.addEventListener('unhandledrejection', (e) => {
-    const msg = e?.reason?.message || String(e?.reason || e);
-    log('Error no capturado: ' + msg);
-  });
-  document.getElementById("start").addEventListener("click", start);
+  window.addEventListener('unhandledrejection',(e)=>{log('Error no capturado: '+(e?.reason?.message||String(e?.reason||e)));});
+  document.getElementById("start").addEventListener("click",start);
 
   async function start(){
-    if (isRunning) return;
-    isRunning = true;
-    const startBtn = document.getElementById('start');
-    startBtn.disabled = true;
-
+    if(isRunning) return; isRunning=true; const btn=$("#start"); btn.disabled=true;
     try{
-      const key=$("#apiKey").value.trim(); if(!key){ alert("Coloca tu API key."); return; }
-      if(!window.google || !google.maps || !google.maps.importLibrary){
-        const s=document.createElement("script");
-        s.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(key)+"&v=quarterly";
-        s.async=true; s.defer=true; s.onerror=()=>log("No se pudo cargar Google Maps JS API.");
-        document.body.appendChild(s);
-        await new Promise(res=> s.onload=res);
+      const key=$("#apiKey").value.trim(); if(!key){alert("Coloca tu API key."); return;}
+      if(!window.google||!google.maps||!google.maps.importLibrary){
+        const s=document.createElement("script"); s.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(key)+"&v=quarterly"; s.async=true; s.defer=true;
+        s.onerror=()=>log("No se pudo cargar Google Maps JS API."); document.body.appendChild(s); await new Promise(r=>s.onload=r);
       }
 
-      const keywords = $("#keywords").value.split("\n").map(t=>t.trim()).filter(Boolean);
-      const locations = $("#locations").value.split("\n").map(t=>t.trim()).filter(Boolean);
-      if (!keywords.length || !locations.length) { alert("Agrega al menos 1 keyword y 1 ubicación."); return; }
+      const keywords=$("#keywords").value.split("\n").map(t=>t.trim()).filter(Boolean);
+      const locations=$("#locations").value.split("\n").map(t=>t.trim()).filter(Boolean);
+      if(!keywords.length||!locations.length){alert("Agrega al menos 1 keyword y 1 ubicación."); return;}
 
-      const emailTimeout = Math.max(1, Math.min(20, parseInt($("#emailTimeoutTop").value,10) || 10));
+      const emailTimeout=Math.max(1,Math.min(20,parseInt($("#emailTimeoutTop").value,10)||10));
       const language="es";
 
       rows=[]; renderBody(); setProgress(0); setComboProgress(0);
-      const totalCombos = keywords.length * locations.length;
-      $("#comboProgress").textContent = `(0/${totalCombos})`;
+      const total=keywords.length*locations.length; $("#comboProgress").textContent=`(0/${total})`;
 
-      const { Place } = await google.maps.importLibrary("places");
-      const geocoder = new google.maps.Geocoder();
+      const {Place}=await google.maps.importLibrary("places");
+      const geocoder=new google.maps.Geocoder();
 
-      let comboIndex = 0;
-      for (const kw of keywords){
-        for (const loc of locations){
-          comboIndex++;
-          $("#statusText").textContent = `"${kw}" in "${loc}"`;
-          $("#comboProgress").textContent = `(${comboIndex}/${totalCombos})`;
-          setComboProgress( Math.round((comboIndex-1)/totalCombos*100) );
+      let idx=0;
+      for(const kw of keywords){
+        for(const loc of locations){
+          idx++; $("#statusText").textContent=`"${kw}" in "${loc}"`;
+          $("#comboProgress").textContent=`(${idx}/${total})`;
+          setComboProgress(Math.round((idx-1)/total*100));
 
-          const center = await geocodeAddress(geocoder, loc);
-          if (!center){ log(`No se pudo geocodificar: ${loc}`); continue; }
+          const center=await geocodeAddress(geocoder,loc);
+          if(!center){ log(`No se pudo geocodificar: ${loc}`); continue; }
 
-          let places = [];
-          try { places = await textSearchAll({ apiKey: key, textQuery: kw, center, radius: 5000, language }); }
-          catch (err) { log(`Error en "${kw}" @ "${loc}": ${err?.message||err}`); continue; }
+          let places=[]; try{ places=await textSearchAll({apiKey:key,textQuery:kw,center,radius:5000,language}); }
+          catch(err){ log(`Error en "${kw}" @ "${loc}": ${err?.message||err}`); continue; }
 
-          log(`(${comboIndex}/${totalCombos}) ${kw} @ ${loc}: ${places.length} resultados`);
+          log(`(${idx}/${total}) ${kw} @ ${loc}: ${places.length} resultados`);
           let i=0;
-
-          for (const p of places){
+          for(const p of places){
             i++;
-            const displayName = (typeof p.displayName === "string") ? p.displayName
-                                  : (p.displayName && p.displayName.text) ? p.displayName.text : "";
-
-            // Address parts
-            let city="", state="", postal="";
+            const displayName= (typeof p.displayName==="string")?p.displayName:(p.displayName&&p.displayName.text)?p.displayName.text:"";
+            let city="",state="",postal="";
             if(Array.isArray(p.addressComponents)){
               for(const c of p.addressComponents){
                 const t=c.types||[]; const longTxt=c.longText||c.long_name||c.name||"";
@@ -496,68 +353,42 @@ Nogales Sonora</textarea>
                 if(t.includes("postal_code")) postal=postal||longTxt;
               }
             }
+            const phone=p.nationalPhoneNumber||p.internationalPhoneNumber||"";
+            const mapLink="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent((displayName||" ")+" "+(p.formattedAddress||""));
+            const embed="https://www.google.com/maps?q="+encodeURIComponent((displayName||" ")+" "+(p.formattedAddress||""))+"&output=embed";
 
-            const phone = p.nationalPhoneNumber || p.internationalPhoneNumber || "";
-            const mapLinkFallback = "https://www.google.com/maps/search/?api=1&query=" +
-              encodeURIComponent((displayName || "") + " " + (p.formattedAddress || ""));
-            const embedSimple = "https://www.google.com/maps?q=" +
-              encodeURIComponent((displayName || "") + " " + (p.formattedAddress || "")) + "&output=embed";
-
-            // Details opcional: websiteUri (si Website o Email están activos)
-            let websiteUri = "";
-            if (includeWebsite || includeEmail){
-              try {
-                const detail = new Place({ id: p.id, requestedLanguage: language, region: "mx" });
-                await detail.fetchFields({ fields: ["websiteUri"] });
-                websiteUri = detail.websiteUri || "";
-              } catch(_) {}
+            let websiteUri="";
+            if(includeWebsite||includeEmail){
+              try{ const detail=new Place({id:p.id,requestedLanguage:language,region:"mx"}); await detail.fetchFields({fields:["websiteUri"]}); websiteUri=detail.websiteUri||""; }
+              catch(_){}
             }
-
-            // Email best-effort
             let email="";
-            if (includeEmail && websiteUri){
-              try { email = await tryExtractEmail(websiteUri, emailTimeout*1000); } catch(_) { email=""; }
+            if(includeEmail&&websiteUri){
+              try{ email=await tryExtractEmail(websiteUri,emailTimeout*1000); }catch(_){ email=""; }
             }
 
-            const row = {
-              "KW": kw,
-              "Location": loc,
-              "Company Name": displayName,
-              "Category": p.primaryType || (p.types ? p.types[0] : ""),
-              "Website": websiteUri || "",
-              "Phone": phone,
-              "email": email,
-              "address": p.formattedAddress || "",
-              "Postal Code + City": (postal?postal+" ":"") + (city||""),
-              "state": state || "",
-              "pin code": postal || "",
-              "# Reviews": p.userRatingCount ?? "",
-              "Review": p.rating ?? "",
-              "CID": "",
-              "MapLink": mapLinkFallback,
-              "Lat":  (p.location && (p.location.lat ?? p.location.latitude)) ?? "",
-              "Lng":  (p.location && (p.location.lng ?? p.location.longitude)) ?? "",
-              "Plus Code": (p.plusCode?.compoundCode || p.plusCode?.globalCode || ""),
-              "Status": p.businessStatus || "",
-              "Types": Array.isArray(p.types) ? p.types.join("|") : "",
-              "Embed": embedSimple
-            };
+            rows.push({
+              "KW":kw,"Location":loc,"Company Name":displayName,
+              "Category":p.primaryType||(p.types?p.types[0]:""),
+              "Website":websiteUri||"","Phone":phone,"email":email,"address":p.formattedAddress||"",
+              "Postal Code + City":(postal?postal+" ":"")+(city||""),"state":state||"","pin code":postal||"",
+              "# Reviews":p.userRatingCount??"","Review":p.rating??"","CID":"",
+              "MapLink":mapLink,"Lat":(p.location&&(p.location.lat??p.location.latitude))??"",
+              "Lng":(p.location&&(p.location.lng??p.location.longitude))??"",
+              "Plus Code":(p.plusCode?.compoundCode||p.plusCode?.globalCode||""),
+              "Status":p.businessStatus||"","Types":Array.isArray(p.types)?p.types.join("|"):"",
+              "Embed":embed
+            });
 
-            rows.push(row);
-            if (i % 5 === 0) renderBody();
-            setProgress( Math.min(100, Math.round((i/Math.max(1,places.length))*100)) );
+            if(i%5===0) renderBody();
+            setProgress(Math.min(100,Math.round((i/Math.max(1,places.length))*100)));
           }
           renderBody();
         }
       }
-      setComboProgress(100);
-      log("Proceso finalizado.");
-    } catch(err){
-      log('Fallo inesperado: ' + (err?.message || err));
-    } finally {
-      isRunning = false;
-      document.getElementById('start').disabled = false;
-    }
+      setComboProgress(100); log("Proceso finalizado.");
+    }catch(err){ log('Fallo inesperado: '+(err?.message||err)); }
+    finally{ isRunning=false; $("#start").disabled=false; }
   }
   </script>
 </body>
