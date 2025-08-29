@@ -41,7 +41,7 @@
     pre#log{ background:#0f0f0f; border:1px solid var(--border); border-radius:12px; padding:10px; white-space:pre-wrap; max-height:150px; overflow:auto; }
 
     .table-wrap{ margin-top:12px; background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:8px; overflow:auto; }
-    table{ width:2000px; border-collapse:separate; border-spacing:0; }
+    table{ width:2400px; border-collapse:separate; border-spacing:0; }
     thead th{ position:sticky; top:0; z-index:1; background:#111; color:#cbd5e1; text-align:left; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border); }
     tbody td{ padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; font-size:14px; }
     .muted{ color:var(--muted) }
@@ -145,10 +145,31 @@
       <table id="tbl">
         <thead>
           <tr>
-            <th>KW</th><th>Location</th><th>Company Name</th><th>Category</th><th>Website</th><th>Phone</th><th>email</th>
-            <th>address</th><th>Postal Code + City</th><th>state</th><th>pin code</th><th># Reviews</th><th>Review</th>
-            <th>CID</th><th>MapLink</th><th>Lat</th><th>Lng</th><th>Tipo + Subtipos</th><th>Precio</th><th>Horario</th>
-            <th>Resumen</th><th>Foto</th><th>Partners</th>
+            <th>KW</th>
+            <th>State</th>
+            <th>City</th>
+            <th>Colony</th>
+            <th>Company Name</th>
+            <th>Category</th>
+            <th>Website</th>
+            <th>Phone</th>
+            <th>email</th>
+            <th>address</th>
+            <th>Postal Code + City</th>
+            <th>state</th>
+            <th>pin code</th>
+            <th># Reviews</th>
+            <th>Review</th>
+            <th>CID</th>
+            <th>MapLink</th>
+            <th>Lat</th>
+            <th>Lng</th>
+            <th>Tipo + Subtipos</th>
+            <th>Precio</th>
+            <th>Horario</th>
+            <th>Resumen</th>
+            <th>Foto</th>
+            <th>Partners</th>
           </tr>
         </thead>
         <tbody id="body"></tbody>
@@ -161,7 +182,7 @@
     const log = (m,k="")=>{ const el=$("#log"); el.textContent+=(el.textContent?"\n":"")+m; el.scrollTop=el.scrollHeight; console[(k==="err"?"error":k==="warn"?"warn":"log")](m); };
     const setFound = n => $("#found").textContent=n;
 
-    // Métricas (si tu red bloquea CountAPI/ipapi, no pasa nada; se silencian)
+    // Métricas (silencioso si tu red bloquea CountAPI/ipapi)
     const NS = location.host || "localdev";
     const capi = (kind,key)=>fetch(`https://api.countapi.xyz/${kind}/${encodeURIComponent(NS)}/${encodeURIComponent(key)}`).then(r=>r.ok?r.json():null).catch(()=>null);
     async function updateMetrics(){
@@ -214,7 +235,7 @@
       return fm.join(",");
     }
 
-    // Geocoding (soporta colonia → sesgo neighborhood/sublocality)
+    // Geocoding
     async function geocodeText(address, key, {colonia=false} = {}){
       const params = new URLSearchParams({
         address,
@@ -240,7 +261,7 @@
       }
     }
 
-    // Fallback con Places (si Geocoding falla/deshabilitado)
+    // Fallback con Places
     async function fallbackGeocodeByPlaces(q, key){
       try{
         const endpoint=`https://places.googleapis.com/v1/places:searchText?key=${encodeURIComponent(key)}`;
@@ -272,11 +293,9 @@
       return all;
     }
 
-    // Utilidad: km -> grados
     const kmToLat = km => km/110.574;
     const kmToLng = (km,lat) => km/(111.320*Math.cos(lat*Math.PI/180));
 
-    // Genera centros para Grid usando viewport o caja alrededor del centro
     function buildGridCenters({center, viewport, stepKm, maxCells}){
       const pts=[];
       let sw, ne;
@@ -306,7 +325,7 @@
         const tr=document.createElement("tr");
         r.forEach((v,i)=>{
           const td=document.createElement("td");
-          if(i===14||i===4){ td.innerHTML = v?`<a href="${v}" target="_blank" rel="noopener">${v}</a>`:""; }
+          if(i===6 || i===16){ td.innerHTML = v?`<a href="${v}" target="_blank" rel="noopener">${v}</a>`:""; }
           else td.textContent = v==null ? "" : String(v);
           tr.appendChild(td);
         });
@@ -316,7 +335,11 @@
     }
 
     function downloadCSV(rows,name="results.csv"){
-      const head=["KW","Location","Company Name","Category","Website","Phone","email","address","Postal Code + City","state","pin code","# Reviews","Review","CID","MapLink","Lat","Lng","Tipo + Subtipos","Precio","Horario","Resumen","Foto","Partners"];
+      const head=[
+        "KW","State","City","Colony","Company Name","Category","Website","Phone","email","address",
+        "Postal Code + City","state","pin code","# Reviews","Review","CID","MapLink","Lat","Lng",
+        "Tipo + Subtipos","Precio","Horario","Resumen","Foto","Partners"
+      ];
       const csv=toCSV([head,...rows]); const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}); const url=URL.createObjectURL(blob); const a=document.createElement("a");
       a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);
     }
@@ -326,20 +349,17 @@
       const targets=[];
       const C = ciudades.length ? ciudades : [""];
       const E = estados.length ? estados : [""];
-      // con colonia
       if (colonias.length){
-        for(const c of C) for(const e of E) for(const col of colonias){
-          const city = c ? c : ""; const state = e ? e : "";
-          const label = `${city||"?"}, ${state||"?"} (Col. ${col})`.replace(/,\s\?/g,"").replace(/\?,/g,"").trim();
-          const query = [col, city, state, "MX"].filter(Boolean).join(", ");
-          targets.push({ label, query, colonia:true });
+        for(const city of C) for(const state of E) for(const colony of colonias){
+          const label = [city,state,`Col. ${colony}`].filter(Boolean).join(", ");
+          const query = [colony,city,state,"MX"].filter(Boolean).join(", ");
+          targets.push({ state, city, colony, label, query, coloniaFlag:true });
         }
       } else {
-        for(const c of C) for(const e of E){
-          const city = c ? c : ""; const state = e ? e : "";
-          const label = [city, state].filter(Boolean).join(", ");
-          const query = [city, state, "MX"].filter(Boolean).join(", ");
-          if (label || query) targets.push({ label, query, colonia:false });
+        for(const city of C) for(const state of E){
+          const label = [city,state].filter(Boolean).join(", ");
+          const query = [city,state,"MX"].filter(Boolean).join(", ");
+          targets.push({ state, city, colony:"", label, query, coloniaFlag:false });
         }
       }
       return targets;
@@ -367,7 +387,7 @@
       if (!targets.length){ log("Debes escribir al menos una Ciudad o un Estado.","warn"); return; }
 
       for(const t of targets){
-        const g = await geocodeText(t.query, key, {colonia:t.colonia});
+        const g = await geocodeText(t.query, key, {colonia:t.coloniaFlag});
         if(!g){ log(`No se pudo geocodificar: ${t.label}`,"warn"); continue; }
         const baseCenter = {lat:g.center.lat, lng:g.center.lng};
         const centers = gridOn ? buildGridCenters({center:baseCenter, viewport:g.viewport, stepKm, maxCells}) : [baseCenter];
@@ -391,19 +411,39 @@
                 const types=Array.isArray(p.types)?p.types:[]; const primary=p.primaryType||"";
                 const subTypes=toggles.types?types.filter(tt=>tt!==primary).join("|"):"";
                 const price=p.priceLevel!=null?String(p.priceLevel):"";
-                const shortAddr=p.shortFormattedAddress||"";
                 const hours=p.currentOpeningHours?.weekdayDescriptions?.join(" | ")||(p.currentOpeningHours?.openNow!=null?(p.currentOpeningHours.openNow?"abierto":"cerrado"):"");
                 const summary=p.editorialSummary?.text||"";
-                let website=""; // (Place Details para website — opcional futuro)
+                let website=""; // (Place Details opcional futuro)
                 let email=""; if(toggles.email){ email = await tryExtractEmail(website, parseInt($("#maxEmailSec").value||"10",10)); }
                 const partners=toggles.partners?detectPartners(website):"";
-                rows.push([ kw, t.label, name, cat, website, phone, email, addr, "", "", "", count, rating, p.id||"", guri, lat, lng,
-                  (toggles.types?((p.primaryTypeDisplayName||primary)+(subTypes?` | ${subTypes}`:"")):""),
-                  (toggles.price?price:""),
-                  (toggles.hours?hours:""),
-                  (toggles.summary?summary:""),
-                  (toggles.photo && p.photos && p.photos[0]?.name ? p.photos[0].name : ""),
-                  partners
+
+                // Fila con columnas separadas de State / City / Colony
+                rows.push([
+                  kw,                 // 0 KW
+                  t.state||"",        // 1 State
+                  t.city||"",         // 2 City
+                  t.colony||"",       // 3 Colony
+                  name,               // 4 Company
+                  cat,                // 5 Category
+                  website,            // 6 Website (link)
+                  phone,              // 7 Phone
+                  email,              // 8 email
+                  addr,               // 9 address
+                  "",                 // 10 Postal Code + City (no parseado)
+                  "",                 // 11 state (legacy, vacío)
+                  "",                 // 12 pin code (legacy, vacío)
+                  count,              // 13 # Reviews
+                  rating,             // 14 Review
+                  p.id||"",           // 15 CID
+                  guri,               // 16 MapLink (link)
+                  lat,                // 17 Lat
+                  lng,                // 18 Lng
+                  (toggles.types?((p.primaryTypeDisplayName||primary)+(subTypes?` | ${subTypes}`:"")):""), // 19 Tipos
+                  (toggles.price?price:""),      // 20 Precio
+                  (toggles.hours?hours:""),      // 21 Horario
+                  (toggles.summary?summary:""),  // 22 Resumen
+                  (toggles.photo && p.photos && p.photos[0]?.name ? p.photos[0].name : ""), // 23 Foto
+                  partners            // 24 Partners
                 ]);
               }
             }catch(e){
