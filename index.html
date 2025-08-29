@@ -4,7 +4,6 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Scrapping Tool — Google Places</title>
-
 <style>
   :root{ --panel:#111; --border:#2a2a2a; --fg:#eaeaea; --muted:#bfbfbf; --accent:#1db954; }
   html,body{margin:0;padding:0;background:#0b0b0b;color:var(--fg);font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;}
@@ -13,14 +12,8 @@
   /* ======= BARRA ÚNICA ======= */
   .unibar{
     display:grid;
-    /* 12 columnas: KW | Ubi | API | Lat | Web | Email | Radio | SegEmail | Extras | Iniciar | Exportar | (espacio flexible) */
-    grid-template-columns: 1.25fr 1.25fr 1fr .8fr .8fr .8fr .6fr .7fr 1.4fr .9fr .9fr auto;
-    gap:8px;
-    background:var(--panel);
-    border:1px solid var(--border);
-    border-radius:10px;
-    padding:10px;
-    align-items:start;
+    grid-template-columns: 1.25fr 1.25fr 1fr .8fr .8fr .8fr .6fr .7fr 1.5fr .9fr .9fr auto;
+    gap:8px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px;align-items:start;
   }
   .cell{display:flex;flex-direction:column;gap:6px;min-width:0}
   .head{font-size:12px;color:var(--muted)}
@@ -34,8 +27,7 @@
   .btn{height:36px;border-radius:8px;border:1px solid var(--border);background:#2b2b2b;color:#fff;font-weight:600;white-space:nowrap;padding:0 12px}
   .btn.primary{background:var(--accent);border-color:#159a45;color:#0b130d}
   .btn:disabled{opacity:.6;cursor:not-allowed}
-  .extras{
-    display:flex;flex-wrap:wrap;gap:8px;background:#1a1a1a;border:1px solid var(--border);border-radius:8px;padding:6px 8px;align-items:center}
+  .extras{display:flex;flex-wrap:wrap;gap:8px;background:#1a1a1a;border:1px solid var(--border);border-radius:8px;padding:6px 8px;align-items:center}
   .extras label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--fg)}
   .spacer{min-width:10px}
 
@@ -60,43 +52,35 @@
       <div class="head">Keywords</div>
       <textarea id="keywords">Restaurante</textarea>
     </div>
-
     <div class="cell">
       <div class="head">Ubicaciones</div>
       <textarea id="locations">Hermosillo Sonora
 Nogales Sonora</textarea>
     </div>
-
     <div class="cell">
       <div class="head">API Key</div>
       <input type="text" id="apiKey" placeholder="pegar aqui la Key">
     </div>
-
     <div class="cell">
       <div class="head">Lat &amp; Long</div>
       <div class="checkwrap"><input type="checkbox" id="includeLatLng" checked disabled></div>
     </div>
-
     <div class="cell">
       <div class="head">Website</div>
       <div class="checkwrap"><input type="checkbox" id="includeWebsite"></div>
     </div>
-
     <div class="cell">
       <div class="head">Email</div>
       <div class="checkwrap"><input type="checkbox" id="extractEmail"></div>
     </div>
-
     <div class="cell">
       <div class="head">Radio (km)</div>
       <input type="number" id="radiusKm" min="0.1" max="50" step="0.1" value="5">
     </div>
-
     <div class="cell">
       <div class="head">Seg máx. email</div>
       <input type="number" id="emailTimeoutTop" min="1" max="20" value="10">
     </div>
-
     <div class="cell">
       <div class="head">Campos extra</div>
       <div class="extras">
@@ -107,19 +91,17 @@ Nogales Sonora</textarea>
         <label><input type="checkbox" id="tgTypes"> Tipo + Subtipos</label>
         <label><input type="checkbox" id="tgShort"> Short Addr</label>
         <label><input type="checkbox" id="tgSummary"> Resumen</label>
+        <label><input type="checkbox" id="tgActions"> Reservas/Delivery</label>
       </div>
     </div>
-
     <div class="cell">
       <div class="head">&nbsp;</div>
       <button class="btn primary" id="start">Iniciar extracción</button>
     </div>
-
     <div class="cell">
       <div class="head">&nbsp;</div>
       <button class="btn" id="export">Descargar</button>
     </div>
-
     <div class="spacer"></div>
   </div>
 
@@ -139,7 +121,7 @@ Nogales Sonora</textarea>
 <script>
 "use strict";
 
-/* ===== Helpers ===== */
+/* ============ Helpers UI ============ */
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 function toStr(v){return v==null?"":String(v);}
@@ -160,11 +142,12 @@ function buildPhotoUrl(photoName, apiKey, maxW=800, maxH=600){
   return `${base}?${params.toString()}`;
 }
 
-/* ===== UI state ===== */
-const apiKey=$("#apiKey");
-apiKey.value=localStorage.getItem("st_api_key")||"";
-apiKey.addEventListener("change",()=>localStorage.setItem("st_api_key", apiKey.value));
+/* ============ Persistencia API KEY ============ */
+const apiKeyEl=$("#apiKey");
+apiKeyEl.value=localStorage.getItem("st_api_key")||"";
+apiKeyEl.addEventListener("change",()=>localStorage.setItem("st_api_key", apiKeyEl.value));
 
+/* ============ Toggles ============ */
 let includeEmail=false, includeWebsite=false, isRunning=false;
 $("#extractEmail").addEventListener("change",e=>{ includeEmail=e.target.checked; renderHeader(); renderBody(); });
 $("#includeWebsite").addEventListener("change",e=>{ includeWebsite=e.target.checked; });
@@ -176,30 +159,25 @@ const toggles = {
   photo: $("#tgPhoto").checked || false,
   types: $("#tgTypes").checked || false,
   short: $("#tgShort").checked || false,
-  summary: $("#tgSummary").checked || false
+  summary: $("#tgSummary").checked || false,
+  actions: $("#tgActions").checked || false
 };
 for(const id of Object.keys(toggles)){
-  $("#tg"+id.charAt(0).toUpperCase()+id.slice(1)).addEventListener("change", e=>{
+  const el = $("#tg"+id.charAt(0).toUpperCase()+id.slice(1));
+  el.addEventListener("change", e=>{
     toggles[id]=e.target.checked;
     renderHeader(); renderBody();
   });
 }
 
-/* ===== Tabla config ===== */
+/* ============ Tabla: columnas ============ */
 const BASE_COLS = [
   "KW","Location","Company Name","Category","Website","Phone","email","address",
+  // Acciones (se mostrarán sólo si toggles.actions):
+  "Has Reservation","Reservation Provider","Reservation Link","Delivery Providers",
   "Postal Code + City","state","pin code","# Reviews","Review","CID","MapLink",
   "Lat","Lng","Plus Code","Status","Embed"
 ];
-const EXTRA_COL_MAP = {
-  short : "Short Address",
-  price : "Price Level",
-  hours : "Open Now|Hours (week)",  // 2 columnas
-  maps  : "Maps URI",
-  photo : "PhotoURL",
-  types : "Primary Type (display)|Subtypes", // 2 columnas
-  summary: "Editorial Summary"
-};
 const DEFAULT_WIDTHS = {
   "KW":120,"Location":140,"Company Name":220,"Category":130,
   "Website":180,"Phone":120,"email":220,"address":340,"Short Address":180,
@@ -207,20 +185,32 @@ const DEFAULT_WIDTHS = {
   "# Reviews":110,"Review":90,"Price Level":110,"Open Now":110,"Hours (week)":220,
   "CID":150,"MapLink":220,"Maps URI":220,
   "Lat":120,"Lng":120,"Plus Code":150,"Status":150,
-  "Primary Type (display)":180,"Subtypes":240,"Editorial Summary":300,"PhotoURL":260,"Embed":220
+  "Primary Type (display)":180,"Subtypes":240,"Editorial Summary":300,"PhotoURL":260,"Embed":220,
+  "Has Reservation":130,"Reservation Provider":170,"Reservation Link":220,"Delivery Providers":200
 };
 const COL_WIDTHS = {...DEFAULT_WIDTHS};
 let rows=[];
 
 function currentHeaders(){
   const cols=[...BASE_COLS];
+
+  // Campos extra
   if(toggles.short) cols.splice(cols.indexOf("Postal Code + City"), 0, "Short Address");
   if(toggles.price) cols.splice(cols.indexOf("CID"), 0, "Price Level");
   if(toggles.hours) cols.splice(cols.indexOf("CID"), 0, "Open Now", "Hours (week)");
   if(toggles.maps) cols.splice(cols.indexOf("Lat"), 0, "Maps URI");
   if(toggles.photo) cols.splice(cols.indexOf("Embed"), 0, "PhotoURL");
   if(toggles.types) cols.splice(cols.indexOf("Status"), 0, "Primary Type (display)","Subtypes");
-  if(toggles.summary) cols.splice(cols.indexOf("PhotoURL")>-1?cols.indexOf("PhotoURL"):cols.indexOf("Embed"), 0, "Editorial Summary");
+  if(toggles.summary) cols.splice(cols.indexOf("Embed"), 0, "Editorial Summary");
+
+  // Si no se activan acciones, eliminamos sus columnas
+  if(!toggles.actions){
+    for(const c of ["Has Reservation","Reservation Provider","Reservation Link","Delivery Providers"]){
+      const i=cols.indexOf(c); if(i>-1) cols.splice(i,1);
+    }
+  }
+
+  // Opciones Website/Email
   if(!includeEmail){ const i=cols.indexOf("email"); if(i>-1) cols.splice(i,1); }
   if(!includeWebsite){ const i=cols.indexOf("Website"); if(i>-1) cols.splice(i,1); }
   return cols;
@@ -298,7 +288,7 @@ $("#export").addEventListener("click",()=>{
   URL.revokeObjectURL(url);
 });
 
-/* ===== FieldMask dinámico según toggles ===== */
+/* ===== FieldMask dinámico ===== */
 function buildFieldMask(){
   const fm = [
     "places.id",
@@ -330,7 +320,45 @@ function buildFieldMask(){
   return fm.join(",");
 }
 
-/* ===== Google Places: Text Search ===== */
+/* ===== Acciones (reservas/delivery) ===== */
+function fetchHtml(url, timeoutMs){
+  const ctrl=new AbortController();
+  const to=setTimeout(()=>ctrl.abort(), timeoutMs);
+  return fetch(url,{mode:"cors",signal:ctrl.signal})
+    .then(r=>r.text())
+    .catch(()=> "")
+    .finally(()=>clearTimeout(to));
+}
+const RESERVATION_PROVIDERS = [
+  {name:"OpenTable", match:/opentable\./i},
+  {name:"TheFork", match:/(thefork\.|eltenedor\.)/i},
+  {name:"Tock", match:/exploretock\.com/i},
+  {name:"SevenRooms", match:/sevenrooms\.com/i},
+  {name:"Resy", match:/resy\.com/i},
+  {name:"Yelp Reservations", match:/yelp\.com\/reservations/i}
+];
+const DELIVERY_PROVIDERS = [
+  {name:"Rappi", match:/rappi\./i},
+  {name:"Uber Eats", match:/ubereats\.|ubereats/i},
+  {name:"DoorDash", match:/doordash\./i},
+  {name:"Just Eat", match:/just\-eat|menulog\./i},
+  {name:"Didi Food", match:/didi.*food|didi\.mx\/food/i}
+];
+function detectActionsFromHtml(html){
+  const out={hasReservation:"",reservationProvider:"",reservationLink:"",deliveryProviders:[]};
+  if(!html) return out;
+  const links=Array.from(html.matchAll(/href\s*=\s*["']([^"']+)["']/gi)).map(m=>m[1]);
+  for(const p of RESERVATION_PROVIDERS){
+    const link=links.find(h=>p.match.test(h));
+    if(link){ out.hasReservation="yes"; out.reservationProvider=p.name; out.reservationLink=link; break; }
+  }
+  for(const p of DELIVERY_PROVIDERS){
+    if(links.some(h=>p.match.test(h))) out.deliveryProviders.push(p.name);
+  }
+  return out;
+}
+
+/* ===== Google Places ===== */
 async function textSearchAll({apiKey,textQuery,center,radius=5000,language="es"}){
   const url="https://places.googleapis.com/v1/places:searchText";
   const headers={
@@ -350,7 +378,6 @@ async function textSearchAll({apiKey,textQuery,center,radius=5000,language="es"}
   }while(pageToken);
   return out;
 }
-
 async function geocodeAddress(geocoder, address){
   try{
     const { results } = await geocoder.geocode({ address });
@@ -361,7 +388,6 @@ async function geocodeAddress(geocoder, address){
     return null;
   }catch{ return null; }
 }
-
 async function tryExtractEmail(url, timeoutMs){
   const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),timeoutMs);
   try{
@@ -430,7 +456,7 @@ async function start(){
           const mapLink="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent((name||" ")+" "+(p.formattedAddress||""));
           const embed="https://www.google.com/maps?q="+encodeURIComponent((name||" ")+" "+(p.formattedAddress||""))+"&output=embed";
 
-          /* Campos extra */
+          /* Campos extra API */
           const shortAddr   = toggles.short  ? (p.shortFormattedAddress || "") : "";
           const priceLevel  = toggles.price  ? (p.priceLevel ?? "")+"" : "";
           const mapsUri     = toggles.maps   ? (p.googleMapsUri || "") : "";
@@ -446,9 +472,9 @@ async function start(){
             photoUrl = buildPhotoUrl(firstPhotoName, key, 800, 600);
           }
 
-          /* Website + Email (vía detail fetch sólo si se requieren) */
+          /* Website + Email (detail fetch si se requieren) */
           let websiteUri="";
-          if(includeWebsite || includeEmail){
+          if(includeWebsite || includeEmail || toggles.actions){
             try{
               const detail=new Place({id:p.id,requestedLanguage:language,region:"mx"});
               await detail.fetchFields({fields:["websiteUri"]});
@@ -460,10 +486,24 @@ async function start(){
             try{ email=await tryExtractEmail(websiteUri,emailTimeout*1000);}catch(_){ email=""; }
           }
 
+          /* Acciones heurísticas */
+          let hasReservation="", reservationProvider="", reservationLink="", deliveryProviders="";
+          if(toggles.actions && websiteUri){
+            try{
+              const html = await fetchHtml(websiteUri, emailTimeout*1000);
+              const det = detectActionsFromHtml(html);
+              hasReservation = det.hasReservation;
+              reservationProvider = det.reservationProvider;
+              reservationLink = det.reservationLink;
+              deliveryProviders = det.deliveryProviders.join("|");
+            }catch(_){}
+          }
+
           rows.push({
             "KW":kw,"Location":loc,"Company Name":name,
             "Category":p.primaryType||(p.types?p.types[0]:""),
             "Website":websiteUri||"","Phone":phone,"email":email,"address":p.formattedAddress||"",
+            "Has Reservation":hasReservation,"Reservation Provider":reservationProvider,"Reservation Link":reservationLink,"Delivery Providers":deliveryProviders,
             "Short Address": shortAddr,
             "Postal Code + City":(postal?postal+" ":"")+(city||""),"state":state||"","pin code":postal||"",
             "# Reviews":p.userRatingCount??"","Review":p.rating??"","Price Level":priceLevel,
