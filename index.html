@@ -4,48 +4,105 @@
   <meta charset="utf-8" />
   <title>Scrapping Tool — Google Places</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Tus estilos -->
-  <link rel="stylesheet" href="./assets/css/scrapping-tool.css?v=7">
-  <link rel="stylesheet" href="./assets/css/utilities.css?v=7">
-  <link rel="stylesheet" href="./assets/css/print.css?v=7" media="print">
 
-  <!-- Ajustes de tabla, resizer y barra de búsqueda corta -->
+  <!-- Tus hojas de estilo (déjalas si ya las tienes en el repo) -->
+  <link rel="stylesheet" href="./assets/css/scrapping-tool.css?v=8">
+  <link rel="stylesheet" href="./assets/css/utilities.css?v=8">
+  <link rel="stylesheet" href="./assets/css/print.css?v=8" media="print">
+
+  <!-- Ajustes específicos (barra unificada + tabla resizable + búsqueda corta) -->
   <style>
-    /* Tabla con anchos fijos por <colgroup> */
-    #table { table-layout: fixed; width: 100%; }
-    #table th, #table td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    /* Resizer de columnas */
-    #thead th { position: relative; }
-    .col-resizer { position: absolute; top:0; right:0; bottom:0; width:6px; cursor: col-resize; user-select:none; }
-    .col-resizer:hover { background: rgba(255,255,255,.06); }
+    :root{
+      --panel: #121212;
+      --border: #2a2a2a;
+    }
 
-    /* Search más corta */
-    .searchbox { width: 360px; flex: 0 0 360px; }
+    /* Layout base (si ya lo tienes en tus CSS, esto sólo refuerza) */
+    .app{ display:grid; grid-template-columns: 340px 1fr; gap:16px; padding:14px; }
+    aside{ background: var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px; }
+    main{ min-width:0; }
 
-    /* Input pequeño en toolbar */
-    .toolbar .tiny { width: 64px; padding: 6px 8px; text-align: center; font-variant-numeric: tabular-nums; }
-    .toolbar .help {
+    /* -------- Toolbar unificada -------- */
+    .toolbar{
+      position: sticky; top: 0; z-index: 5;
+      display: flex; align-items: center; gap: 14px;
+      flex-wrap: wrap; padding: 10px 12px;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 10px; margin-bottom: 12px;
+    }
+    .tgroup{ display:flex; align-items:center; gap:12px; }
+
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      background: rgba(255,255,255,.06); border:1px solid var(--border);
+      padding:6px 10px; border-radius:999px; font-size:13px;
+    }
+    .pill .dot{ width:8px;height:8px;border-radius:50%; background:#1dd75b; display:inline-block; }
+
+    .progress{ height: 8px; background: rgba(255,255,255,.06); border-radius: 999px; overflow: hidden; }
+    .progress > div{ height:100%; width:0%; background:#1dd75b; transition:width .25s; }
+    .progress.slim{ height:6px; }
+
+    .badge{
+      min-width:36px;height:36px;border-radius:10px; display:flex; align-items:center; justify-content:center;
+      background:#0f1b2a; color:white; font-weight:700; border:1px solid var(--border);
+    }
+
+    .checkpill{
+      display:inline-flex; align-items:center; gap:6px;
+      background: rgba(255,255,255,.06); border:1px solid var(--border);
+      padding:6px 10px; border-radius:999px; font-size:13px; user-select:none;
+    }
+
+    /* Controles con título */
+    .ctrl{
+      display:flex; flex-direction:column; align-items:flex-start; gap:6px;
+      min-width:max-content;
+    }
+    .ctrl .caption{
+      font-size:11px; opacity:.8; line-height:1; margin-left:2px;
+    }
+    .ctrl .inline{ display:flex; align-items:center; gap:8px; }
+
+    /* Botones/inputs utilitarios */
+    .btn{ background:#2b2b2b; border:1px solid var(--border); color:#fff; padding:8px 12px; border-radius:10px; }
+    .btn.primary{ background:#1db954; border-color:#17a84a; color:#0b120e; font-weight:700; }
+    .btn:disabled{ opacity:.6; cursor:not-allowed; }
+
+    .searchbox{ width: 360px; flex: 0 0 360px; padding:8px 10px; border-radius:10px; border:1px solid var(--border); background:#1a1a1a; color:#fff; }
+    .tiny{ width: 64px; padding: 6px 8px; text-align:center; font-variant-numeric: tabular-nums;
+           border-radius:10px; border:1px solid var(--border); background:#1a1a1a; color:#fff; }
+
+    .help{
       display:inline-block; width:16px; height:16px; border-radius:50%;
       text-align:center; line-height:16px; font-size:12px; margin-left:6px;
-      background:rgba(255,255,255,.12);
-      cursor:help;
+      background:rgba(255,255,255,.12); cursor:help;
     }
+
+    /* -------- Tabla (anchos fijos + resizer) -------- */
+    #table{ table-layout: fixed; width:100%; border-collapse: separate; border-spacing:0; }
+    #table th, #table td{ overflow:hidden; text-overflow: ellipsis; white-space: nowrap; padding:8px 10px; }
+    #thead th{ position:relative; background:#161616; }
+    .col-resizer{ position:absolute; top:0; right:0; bottom:0; width:6px; cursor:col-resize; user-select:none; }
+    .col-resizer:hover{ background: rgba(255,255,255,.06); }
+
+    /* Inputs laterales */
+    aside input, aside textarea{
+      width:100%; border:1px solid var(--border); border-radius:10px; background:#1a1a1a; color:#fff;
+      padding:10px; outline:none;
+    }
+    aside textarea{ min-height:120px; resize: vertical; }
+
+    /* Hints */
+    .hint{ font-size:12px; opacity:.8; }
   </style>
 </head>
 <body>
   <div class="app">
+    <!-- ======== LATERAL (limpio) ======== -->
     <aside>
       <h1>Scrapping Tool</h1>
       <p class="hint" style="margin-bottom:12px">Google Maps — <b>Places API (New)</b> + Maps JS</p>
-
-      <div class="pill" id="statusPill"><span class="dot"></span>
-        <span id="statusText">“Keyword in Ubicación”</span>
-      </div>
-
-      <p style="margin:10px 0 6px; font-weight:700">
-        Progress <span id="comboProgress">(0/0)</span>
-      </p>
-      <div class="progress" aria-label="progreso combinaciones"><div id="comboBar"></div></div>
 
       <label style="margin-top:14px">API Key</label>
       <input id="apiKey" placeholder="pegar aqui la Key"/>
@@ -57,49 +114,92 @@
       <textarea id="locations">Hermosillo Sonora
 Nogales Sonora</textarea>
 
-      <!-- Se retiró el campo de segundos de aquí (ahora en la toolbar) -->
-
       <p class="hint">Origen: <span id="origin"></span></p>
     </aside>
 
+    <!-- ======== MAIN ======== -->
     <main>
+      <!-- ===== Barra unificada con títulos ===== -->
       <div class="toolbar">
-        <div style="display:flex; align-items:center; gap:10px; min-width:260px">
-          <div class="badge"><span id="count">0</span></div>
-          <div>
-            <div style="font-weight:700; font-size:12px; opacity:.85">RESULTADOS ENCONTRADOS</div>
-            <div class="progress" aria-label="progreso resultados"><div id="bar"></div></div>
+        <!-- Pill + progreso de combinaciones -->
+        <div class="tgroup" id="comboGroup">
+          <div class="pill" id="statusPill" title="Combinación actual (Keyword en Ubicación)">
+            <span class="dot"></span>
+            <span id="statusText">“Keyword in Ubicación”</span>
+          </div>
+          <div class="ctrl">
+            <span class="caption">Progreso combinaciones <span id="comboProgress">(0/0)</span></span>
+            <div class="progress slim" aria-label="Progreso de combinaciones">
+              <div id="comboBar"></div>
+            </div>
           </div>
         </div>
 
-        <button class="btn" id="clear">Limpiar Datos</button>
+        <!-- Contador de resultados -->
+        <div class="tgroup" id="resultsGroup">
+          <div class="ctrl">
+            <span class="caption">Resultados</span>
+            <div class="inline" style="gap:10px">
+              <div class="badge" title="Resultados visibles/filtrados"><span id="count">0</span></div>
+              <div>
+                <div style="font-weight:700; font-size:12px; opacity:.85">ENCONTRADOS</div>
+                <div class="progress" aria-label="Progreso de lectura de página"><div id="bar"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        <!-- Lat/Lng: siempre visibles (switch solo informativo y deshabilitado) -->
-        <label class="checkpill"><input type="checkbox" id="includeLatLng" checked disabled /> Lat & Long</label>
+        <!-- Acciones -->
+        <div class="ctrl">
+          <span class="caption">Datos</span>
+          <button class="btn" id="clear" title="Limpiar resultados y log">Limpiar Datos</button>
+        </div>
 
-        <!-- NUEVO: Website (Details: websiteUri) -->
-        <label class="checkpill"><input type="checkbox" id="includeWebsite" /> Website</label>
+        <div class="ctrl">
+          <span class="caption">Campos</span>
+          <div class="inline">
+            <label class="checkpill" title="Latitud y Longitud (siempre activado)">
+              <input type="checkbox" id="includeLatLng" checked disabled aria-label="Latitud y Longitud"/> Lat & Long
+            </label>
+            <label class="checkpill" title="Solicitar websiteUri (Place Details)">
+              <input type="checkbox" id="includeWebsite" aria-label="Incluir Website"/> Website
+            </label>
+            <label class="checkpill" title="Intentar detectar email desde el sitio (puede fallar por CORS)">
+              <input type="checkbox" id="extractEmail" aria-label="Extraer Email"/> Email
+              <span class="help" aria-hidden="true">?</span>
+            </label>
+          </div>
+        </div>
 
-        <!-- Email (usa websiteUri; muestra ayuda compacta) -->
-        <label class="checkpill">
-          <input type="checkbox" id="extractEmail" /> Email
-          <span class="help" title="Google no entrega el email. Se intenta detectar en la web del negocio (puede fallar por CORS).">?</span>
-        </label>
+        <div class="ctrl">
+          <span class="caption">Segundos máx. email</span>
+          <input class="tiny" id="emailTimeoutTop" value="10"
+                aria-label="Segundos máximos para extraer email"
+                title="Segundos máximos para intentar extraer email"/>
+        </div>
 
-        <!-- Segundos máx para email (arriba, pequeño) -->
-        <input class="tiny" id="emailTimeoutTop" value="10" title="Segundos máx. para intentar extraer el email"/>
+        <div class="ctrl">
+          <span class="caption">Exportar</span>
+          <button class="btn" id="export" title="Descargar resultados en CSV">Descargar</button>
+        </div>
 
-        <button class="btn" id="export">Descargar</button>
-        <input class="searchbox" id="globalSearch" placeholder="Buscar..." />
-        <button class="btn primary" id="start">Iniciar extracción</button>
+        <div class="ctrl" style="min-width: 260px">
+          <span class="caption">Buscar</span>
+          <input class="searchbox" id="globalSearch" placeholder="Buscar..." aria-label="Buscar en los resultados" />
+        </div>
+
+        <div class="ctrl">
+          <span class="caption">Acción</span>
+          <button class="btn primary" id="start" title="Iniciar extracción">Iniciar extracción</button>
+        </div>
       </div>
 
+      <!-- Panel resultados + tabla -->
       <div class="panel">
         <div id="log"></div>
         <div style="height:12px"></div>
         <div style="overflow:auto; max-height:62vh; border:1px solid var(--border); border-radius:10px">
           <table id="table">
-            <!-- colgroup se inserta dinámicamente -->
             <thead id="thead"></thead>
             <tbody id="tbody"></tbody>
           </table>
@@ -111,25 +211,23 @@ Nogales Sonora</textarea>
   <script>
   "use strict";
 
-  // =================== Utilidades ===================
+  // ---------------- Utilidades ----------------
   const $  = (s, r=document)=>r.querySelector(s);
   const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
+
   $("#origin").textContent = location.origin;
 
   const apiKey = $("#apiKey");
   apiKey.value = localStorage.getItem('st_api_key') || "";
   apiKey.addEventListener('change', () => localStorage.setItem('st_api_key', apiKey.value));
 
-  // Encabezados base (Lat/Lng SIEMPRE visibles)
   const headersWantedBase = [
     "KW","Location","Company Name","Category","Website","Phone","email","address",
     "Postal Code + City","state","pin code","# Reviews","Review","CID","MapLink",
     "Lat","Lng",
-    // extras legales sin coste (del Text Search)
     "Plus Code","Status","Types","Embed"
   ];
 
-  // Anchos por columna (ajusta a gusto)
   const COL_WIDTHS = {
     "KW": 120, "Location": 140, "Company Name": 220, "Category": 130,
     "Website": 180, "Phone": 120, "email": 220, "address": 340,
@@ -159,7 +257,6 @@ Nogales Sonora</textarea>
   function log(m){ const el=$("#log"); el.textContent = (el.textContent?el.textContent+"\n":"")+m; console.log("[ScrappingTool]",m); }
   function setProgress(p){ $("#bar").style.width = Math.max(0,Math.min(100,p)) + "%"; }
   function setComboProgress(p){ $("#comboBar").style.width = Math.max(0,Math.min(100,p)) + "%"; }
-
   function updateCounters(){
     const k = $("#keywords").value.split("\n").map(s=>s.trim()).filter(Boolean).length;
     const l = $("#locations").value.split("\n").map(s=>s.trim()).filter(Boolean).length;
@@ -173,11 +270,10 @@ Nogales Sonora</textarea>
   function currentHeaders(){
     const h = [...headersWantedBase];
     if (!includeEmail) { const i = h.indexOf("email"); if (i > -1) h.splice(i, 1); }
-    // Website columna la dejamos visible siempre; si no activas Website, queda vacía (sin Details)
     return h;
   }
 
-  // ----- <colgroup> con anchos -----
+  // ------- colgroup + resizer -------
   function renderColGroup(){
     const table = document.getElementById("table");
     let colgroup = table.querySelector("colgroup");
@@ -190,49 +286,31 @@ Nogales Sonora</textarea>
     });
     table.insertBefore(colgroup, table.firstChild);
   }
-
-  // ----- Resizer -----
   function makeHeadersResizable(){
     const table = document.getElementById("table");
     const colgroup = table.querySelector("colgroup");
     const cols = colgroup ? Array.from(colgroup.children) : [];
     const ths = Array.from(document.querySelectorAll("#thead tr:first-child th"));
-
     ths.forEach((th, i)=>{
       let grip = th.querySelector(".col-resizer");
-      if (!grip) {
-        grip = document.createElement("span");
-        grip.className = "col-resizer";
-        th.appendChild(grip);
-      } else {
-        const clone = grip.cloneNode(true);
-        grip.replaceWith(clone);
-        grip = clone;
-      }
-
+      if (!grip) { grip = document.createElement("span"); grip.className = "col-resizer"; th.appendChild(grip); }
+      else { const clone = grip.cloneNode(true); grip.replaceWith(clone); grip = clone; }
       grip.addEventListener("mousedown", (ev)=>{
         ev.preventDefault();
         const startX = ev.pageX;
         const startW = parseInt((cols[i].style.width || th.offsetWidth) + "", 10) || th.offsetWidth;
-
         function onMove(e){
           const delta = e.pageX - startX;
           const newW = Math.max(60, startW + delta);
           cols[i].style.width = newW + "px";
-          const head = currentHeaders()[i];
-          if (head) COL_WIDTHS[head] = newW;
+          const head = currentHeaders()[i]; if (head) COL_WIDTHS[head] = newW;
         }
-        function onUp(){
-          document.removeEventListener("mousemove", onMove);
-          document.removeEventListener("mouseup", onUp);
-        }
-        document.addEventListener("mousemove", onMove);
-        document.addEventListener("mouseup", onUp);
+        function onUp(){ document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); }
+        document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp);
       });
     });
   }
 
-  // Tabla
   function renderHeader(){
     renderColGroup();
     const thead=$("#thead"); thead.innerHTML="";
@@ -249,9 +327,7 @@ Nogales Sonora</textarea>
 
   function renderBody(){
     const tbody=$("#tbody"); tbody.innerHTML="";
-    const filters={}; $$("#thead input").forEach(i=>{
-      const v=i.value.trim().toLowerCase(); if(v) filters[i.dataset.col]=v;
-    });
+    const filters={}; $$("#thead input").forEach(i=>{ const v=i.value.trim().toLowerCase(); if(v) filters[i.dataset.col]=v; });
     const cols = currentHeaders();
     const data = rows.map(r=>{ const pruned={}; cols.forEach(c=>pruned[c]=r[c]??""); return pruned; })
       .filter(r=>{ for(const k in filters){ if(!toStr(r[k]).toLowerCase().includes(filters[k])) return false; } return true; });
@@ -264,7 +340,6 @@ Nogales Sonora</textarea>
     $("#count").textContent = data.length;
   }
 
-  // UI
   $("#clear").addEventListener("click",()=>{ rows=[]; $("#log").textContent=""; $("#count").textContent="0"; setProgress(0); setComboProgress(0); renderBody(); });
   $("#export").addEventListener("click",()=> downloadCSV("resultados-scrapping.csv", rows));
   $("#globalSearch").addEventListener("input", e=>{
@@ -281,11 +356,11 @@ Nogales Sonora</textarea>
   });
 
   $("#extractEmail").addEventListener("change", e=>{ includeEmail = e.target.checked; renderHeader(); renderBody(); });
-  $("#includeWebsite").addEventListener("change", e=>{ includeWebsite = e.target.checked; /* solo afecta costo; Website col. ya existe */ });
+  $("#includeWebsite").addEventListener("change", e=>{ includeWebsite = e.target.checked; });
 
   renderHeader(); renderBody();
 
-  // ============ REST Text Search (paginado) ============
+  // ---------------- Places API: Text Search (paginado) ----------------
   async function textSearchAll({ apiKey, textQuery, center, radius = 5000, language = "es" }) {
     const url = "https://places.googleapis.com/v1/places:searchText";
     const headers = {
@@ -308,7 +383,6 @@ Nogales Sonora</textarea>
         "nextPageToken"
       ].join(",")
     };
-
     let pageToken = null;
     const results = [];
     do {
@@ -326,11 +400,10 @@ Nogales Sonora</textarea>
       pageToken = data.nextPageToken || null;
       if (pageToken) await new Promise(r=>setTimeout(r, 300));
     } while (pageToken);
-
     return results;
   }
 
-  // ============ Geocoder + Helpers ============
+  // ---------------- Geocoder + helpers ----------------
   async function geocodeAddress(geocoder, address){
     try{
       const { results } = await geocoder.geocode({ address });
@@ -353,12 +426,11 @@ Nogales Sonora</textarea>
     }catch{ return ""; } finally { clearTimeout(to); }
   }
 
-  // ===== Mini-parches: errores y anti doble clic =====
+  // Mini-parches: errores y anti doble-clic
   window.addEventListener('unhandledrejection', (e) => {
     const msg = e?.reason?.message || String(e?.reason || e);
     log('Error no capturado: ' + msg);
   });
-
   document.getElementById("start").addEventListener("click", start);
 
   async function start(){
@@ -369,7 +441,6 @@ Nogales Sonora</textarea>
 
     try{
       const key=$("#apiKey").value.trim(); if(!key){ alert("Coloca tu API key."); return; }
-      // Cargar Maps JS si no está (Geocoder + Details)
       if(!window.google || !google.maps || !google.maps.importLibrary){
         const s=document.createElement("script");
         s.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(key)+"&v=quarterly";
@@ -389,7 +460,6 @@ Nogales Sonora</textarea>
       const totalCombos = keywords.length * locations.length;
       $("#comboProgress").textContent = `(0/${totalCombos})`;
 
-      const { Map }   = await google.maps.importLibrary("maps");
       const { Place } = await google.maps.importLibrary("places");
       const geocoder = new google.maps.Geocoder();
 
@@ -413,7 +483,6 @@ Nogales Sonora</textarea>
 
           for (const p of places){
             i++;
-
             const displayName = (typeof p.displayName === "string") ? p.displayName
                                   : (p.displayName && p.displayName.text) ? p.displayName.text : "";
 
@@ -444,7 +513,7 @@ Nogales Sonora</textarea>
               } catch(_) {}
             }
 
-            // Email best-effort (si está activo y tenemos sitio)
+            // Email best-effort
             let email="";
             if (includeEmail && websiteUri){
               try { email = await tryExtractEmail(websiteUri, emailTimeout*1000); } catch(_) { email=""; }
@@ -468,7 +537,6 @@ Nogales Sonora</textarea>
               "MapLink": mapLinkFallback,
               "Lat":  (p.location && (p.location.lat ?? p.location.latitude)) ?? "",
               "Lng":  (p.location && (p.location.lng ?? p.location.longitude)) ?? "",
-              // Nuevos legales sin costo
               "Plus Code": (p.plusCode?.compoundCode || p.plusCode?.globalCode || ""),
               "Status": p.businessStatus || "",
               "Types": Array.isArray(p.types) ? p.types.join("|") : "",
@@ -482,7 +550,6 @@ Nogales Sonora</textarea>
           renderBody();
         }
       }
-
       setComboProgress(100);
       log("Proceso finalizado.");
     } catch(err){
