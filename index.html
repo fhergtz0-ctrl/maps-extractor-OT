@@ -1,339 +1,616 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Scrapping Tool — Google Maps Places</title>
-<meta name="build" content="build-2025-08-29-4" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Ccircle cx='64' cy='64' r='64' fill='%2322c55e'/%3E%3Cpath d='M64 20c-18 0-32 14-32 32 0 17 26 46 30 50 2 2 5 2 6 0 4-4 30-33 30-50 0-18-14-32-34-32zm0 48a16 16 0 1 1 0-32 16 16 0 0 1 0 32z' fill='%23fff'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗺️</text></svg>">
+
 <style>
-  :root{--bg:#0b0e11;--panel:#11161b;--muted:#88919c;--txt:#e6eef6;--brand:#22c55e;--border:#1f2937;--chip:#1b2330}
+  :root{
+    --bg:#0f1115;
+    --panel:#151821;
+    --muted:#99a1b3;
+    --text:#e7eaf3;
+    --accent:#3b82f6;
+    --green:#22c55e;
+    --red:#ef4444;
+    --chip:#1d2332;
+    --chip2:#0b1320;
+    --border:#242a38;
+  }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial,'Noto Sans',sans-serif}
-  .wrap{max-width:1360px;margin:0 auto;padding:16px}
-  h1{margin:0 0 6px;font-size:22px}
-  .subtitle{color:var(--muted);margin-bottom:12px}
-  .toolbar{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;align-items:end;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px}
-  .field{display:flex;flex-direction:column;gap:6px}
-  .field label{font-size:12px;color:var(--muted)}
-  textarea,input[type="text"],input[type="number"]{background:#0e141a;border:1px solid var(--border);color:var(--txt);border-radius:10px;padding:10px 12px;font-size:14px;outline:none}
-  textarea{resize:vertical;min-height:40px;max-height:140px}
-  .chips{display:flex;gap:10px;flex-wrap:wrap}
-  .chip{display:flex;align-items:center;gap:8px;background:var(--chip);border:1px solid var(--border);padding:8px 10px;border-radius:999px;font-size:13px}
-  .actions{display:flex;gap:10px;justify-content:flex-end}
-  .btn{appearance:none;border:none;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer}
-  .btn-primary{background:var(--brand);color:#071307}
-  .btn-ghost{background:#0f151b;color:var(--txt);border:1px solid var(--border)}
-  .badge{display:inline-flex;align-items:center;gap:8px;background:#0f151b;border:1px dashed var(--border);padding:8px 10px;border-radius:10px;color:var(--muted);font-size:13px}
-  .console{margin-top:12px;background:#0f1419;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:#aab4bf;white-space:pre-wrap}
-  .table-wrap{margin-top:14px;background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:auto}
-  table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
-  thead th{position:sticky;top:0;background:#0f151b;color:#cbd5e1;font-weight:600;font-size:13px;padding:10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
-  tbody td{font-size:13px;color:#e5eef9;border-bottom:1px solid var(--border);padding:8px 10px;vertical-align:top;white-space:nowrap}
-  thead th .filter{display:block;margin-top:6px;background:#0c1015;border:1px solid var(--border);color:#aab4bf;border-radius:8px;padding:6px 8px;width:200px;font-size:12px}
-  .th-mini{width:90px}.th-shrink{width:140px}.th-wide{width:280px}
-  .c-keywords{grid-column:span 3}.c-cities{grid-column:span 2}.c-states{grid-column:span 2}.c-colonies{grid-column:span 2}.c-zips{grid-column:span 1}
-  .c-key{grid-column:span 2}.c-radius{grid-column:span 1}.c-emailsec{grid-column:span 1}.c-extras{grid-column:span 6}.c-actions{grid-column:span 3;display:flex;gap:10px;align-items:center;justify-content:flex-end}
-  .muted{color:var(--muted)}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+  h1{font-size:20px;margin:0 0 8px}
+  small, .muted{color:var(--muted)}
+  .wrap{max-width:1280px;margin:0 auto;padding:16px}
+  .toolbar{
+    display:grid;gap:10px;
+    grid-template-columns: 1.2fr 1fr 0.8fr 0.9fr 0.9fr 0.9fr auto;
+    align-items:end;background:var(--panel);padding:12px;border-radius:12px;border:1px solid var(--border)
+  }
+  .field label{display:block;margin:0 0 6px;color:var(--muted);font-weight:600}
+  .input, textarea, select{
+    width:100%;border:1px solid var(--border);border-radius:10px;background:#0d111a;color:var(--text);
+    padding:10px 12px;outline:none
+  }
+  textarea{min-height:44px;max-height:120px;resize:vertical}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{
+    display:inline-flex;align-items:center;gap:8px;background:var(--chip);
+    border:1px solid var(--border);padding:8px 10px;border-radius:999px
+  }
+  .chip input{accent-color:var(--accent)}
+  .btn{
+    border:1px solid var(--border);background:var(--chip2);padding:10px 14px;border-radius:10px;color:var(--text);
+    cursor:pointer;display:inline-flex;gap:8px;align-items:center;font-weight:600
+  }
+  .btn:hover{border-color:#2f374a}
+  .btn.primary{background:var(--green);border-color:transparent;color:#051108}
+  .btn.secondary{background:var(--panel)}
+  .stats-bar{display:flex;gap:16px;align-items:center;margin:12px 0}
+  .stat{background:var(--panel);border:1px solid var(--border);padding:10px 12px;border-radius:10px}
+  .log{white-space:pre-wrap;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px;margin:12px 0;min-height:100px}
+  /* Table */
+  .results{
+    margin-top:10px;background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:auto
+  }
+  table{border-collapse:separate;border-spacing:0;width:100%;min-width:1400px}
+  thead th{
+    position:sticky;top:0;background:#111520;border-bottom:1px solid var(--border);padding:12px;text-align:left
+  }
+  tbody td{padding:10px;border-bottom:1px solid #1e2435;vertical-align:top}
+  thead input{
+    width:100%;padding:6px 8px;border-radius:8px;background:#0d111a;border:1px solid var(--border);color:var(--muted)
+  }
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#0e1a2b;border:1px solid #22324e;color:#9db7e5}
+  .note{font-size:12px;color:var(--muted)}
+  .right{justify-self:end}
+  .two-col{display:flex;gap:10px}
+  .two-col > *{flex:1}
+  .danger{color:var(--red)}
+  .ok{color:var(--green)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Scrapping Tool — <span class="muted">Google Maps Places</span></h1>
-  <div class="subtitle">Barra única (build <b id="build"></b>), columnas separadas Estado / Ciudad / Colonia / CP. Marca “Campos extra”.</div>
+  <div class="note">Barra única, resultados paginados por combinación, columnas separadas para Estado / Ciudad / Colonia / CP. Marca los “Campos extra” que desees.</div>
 
-  <section class="toolbar">
-    <div class="field c-keywords"><label>Keywords (uno por línea)</label><textarea id="kw" placeholder="Restaurantes&#10;Tacos"></textarea></div>
-    <div class="field c-cities"><label>Ciudad(es)</label><textarea id="cities" placeholder="Hermosillo&#10;Cabo San Lucas"></textarea></div>
-    <div class="field c-states"><label>Estado(s)</label><textarea id="states" placeholder="Sonora&#10;Baja California Sur"></textarea></div>
-    <div class="field c-colonies"><label>Colonia(s) (opcional)</label><textarea id="colonies" placeholder="Centro"></textarea></div>
-    <div class="field c-zips"><label>Códigos postales (opcional)</label><textarea id="zips" placeholder="83000&#10;23450"></textarea></div>
-
-    <div class="field c-key">
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="field">
+      <label>Keywords <span class="note">(uno por línea)</span></label>
+      <textarea id="kw" placeholder="restaurantes&#10;taquería"></textarea>
+    </div>
+    <div class="field">
+      <label>Ciudad(es)</label>
+      <textarea id="cities" placeholder="hermosillo"></textarea>
+    </div>
+    <div class="field">
+      <label>Estado(s)</label>
+      <textarea id="states" placeholder="sonora"></textarea>
+    </div>
+    <div class="field">
+      <label>Colonia(s) <span class="note">(opcional)</span></label>
+      <textarea id="colonies" placeholder="centro"></textarea>
+    </div>
+    <div class="field">
+      <label>Códigos postales <span class="note">(opcional)</span></label>
+      <textarea id="zips" placeholder="83000&#10;83290"></textarea>
+    </div>
+    <div class="field">
       <label>API Key</label>
-      <input id="apiKey" type="text" placeholder="Pegar aquí la Key">
+      <input id="apikey" class="input" placeholder="Pegar aquí la Key" />
       <div class="chips" style="margin-top:8px">
-        <label class="chip"><input id="wantLatLng" type="checkbox" checked> Lat &amp; Long</label>
-        <label class="chip"><input id="wantWebsite" type="checkbox" checked> Website</label>
-        <label class="chip"><input id="wantEmail" type="checkbox"> Email</label>
+        <label class="chip"><input type="checkbox" id="wantLatLng" checked> <span>Lat &amp; Long</span></label>
+        <label class="chip"><input type="checkbox" id="wantWebsite" checked> <span>Website</span></label>
+        <label class="chip"><input type="checkbox" id="wantEmail"> <span>Email</span></label>
       </div>
     </div>
-
-    <div class="field c-radius"><label>Radio por consulta (km)</label><input id="radiusKm" type="number" min="1" max="50" value="3"></div>
-    <div class="field c-emailsec"><label>Seg máx. email</label><input id="emailWait" type="number" min="0" max="30" value="10"></div>
-
-    <div class="field c-extras">
-      <label>Campos extra</label>
-      <div class="chips">
-        <label class="chip"><input id="exHorario" type="checkbox"> Horario</label>
-        <label class="chip"><input id="exPrecio" type="checkbox"> Precio</label>
-        <label class="chip"><input id="exMapsUri" type="checkbox"> Maps URI</label>
-        <label class="chip"><input id="exFoto" type="checkbox"> Foto</label>
-        <label class="chip"><input id="exTipos" type="checkbox" checked> Tipo + Subtipos</label>
-        <label class="chip"><input id="exShortAddr" type="checkbox" checked> Short Addr</label>
-        <label class="chip"><input id="exResumen" type="checkbox"> Resumen</label>
-        <label class="chip"><input id="exPartners" type="checkbox" checked> Partners (Reserva/Delivery)</label>
+    <div class="field right">
+      <div class="two-col">
+        <div>
+          <label>Radio por consulta (km)</label>
+          <input id="radiusKm" class="input" type="number" min="1" value="3" />
+        </div>
+        <div>
+          <label>Seg máx. email</label>
+          <input id="emailWait" class="input" type="number" min="3" value="10" />
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <div class="chips">
+          <label class="chip"><input type="checkbox" id="xHorario"> <span>Horario</span></label>
+          <label class="chip"><input type="checkbox" id="xPrecio"> <span>Precio</span></label>
+          <label class="chip"><input type="checkbox" id="xMapsUri"> <span>Maps URI</span></label>
+          <label class="chip"><input type="checkbox" id="xFoto"> <span>Foto</span></label>
+          <label class="chip"><input type="checkbox" id="xTipos" checked> <span>Tipo + Subtipos</span></label>
+          <label class="chip"><input type="checkbox" id="xShort"> <span>Short Addr</span></label>
+          <label class="chip"><input type="checkbox" id="xResumen"> <span>Resumen</span></label>
+          <label class="chip"><input type="checkbox" id="xPartners" checked> <span>Partners (Reserva/Delivery)</span></label>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;justify-content:flex-end">
+        <button id="start" class="btn primary">Iniciar</button>
+        <button id="download" class="btn secondary">Descargar</button>
+        <div class="stat">Resultados: <b id="count">0</b></div>
       </div>
     </div>
+  </div>
 
-    <div class="c-actions">
-      <button id="btnStart" class="btn btn-primary">Iniciar</button>
-      <button id="btnDownload" class="btn btn-ghost">Descargar</button>
-      <span class="badge">Resultados: <b id="found">0</b></span>
-    </div>
-  </section>
+  <!-- Métricas -->
+  <div class="stats-bar">
+    <div class="stat">👁️ Visitas: <span id="visits">—</span></div>
+    <div class="stat">⚙️ Extracciones: <span id="runs">—</span></div>
+    <div class="stat">📍 País: <span id="country">—</span></div>
+  </div>
 
-  <div id="log" class="console">Listo para iniciar…</div>
+  <!-- Log -->
+  <div id="log" class="log">Listo para iniciar…</div>
 
-  <div class="table-wrap">
+  <!-- Tabla -->
+  <div class="results">
     <table id="tbl">
       <thead>
         <tr>
-          <th class="th-mini">KW<input class="filter" data-col="kw" placeholder="filtrar…"></th>
-          <th class="th-mini">State<input class="filter" data-col="state" placeholder="filtrar…"></th>
-          <th class="th-mini">City<input class="filter" data-col="city" placeholder="filtrar…"></th>
-          <th class="th-mini">Colony<input class="filter" data-col="colony" placeholder="filtrar…"></th>
-          <th class="th-shrink">Company Name<input class="filter" data-col="name" placeholder="filtrar…"></th>
-          <th class="th-mini">Category<input class="filter" data-col="category" placeholder="filtrar…"></th>
-          <th class="th-shrink">Website<input class="filter" data-col="website" placeholder="filtrar…"></th>
-          <th class="th-mini">Phone<input class="filter" data-col="phone" placeholder="filtrar…"></th>
-          <th class="th-mini">email<input class="filter" data-col="email" placeholder="filtrar…"></th>
-          <th class="th-wide">address<input class="filter" data-col="address" placeholder="filtrar…"></th>
-          <th class="th-mini">Postal Code<input class="filter" data-col="postal" placeholder="filtrar…"></th>
-          <th class="th-mini">Lat<input class="filter" data-col="lat" placeholder="filtrar…"></th>
-          <th class="th-mini">Lng<input class="filter" data-col="lng" placeholder="filtrar…"></th>
-          <th class="th-wide">Tipo + Subtipos<input class="filter" data-col="types" placeholder="filtrar…"></th>
-          <th class="th-mini">Precio<input class="filter" data-col="price" placeholder="filtrar…"></th>
-          <th class="th-mini">Horario<input class="filter" data-col="hours" placeholder="filtrar…"></th>
-          <th class="th-wide">Resumen<input class="filter" data-col="summary" placeholder="filtrar…"></th>
-          <th class="th-shrink">Foto<input class="filter" data-col="photo" placeholder="filtrar…"></th>
-          <th class="th-mini"># Reviews<input class="filter" data-col="reviews" placeholder="filtrar…"></th>
-          <th class="th-mini">Review<input class="filter" data-col="rating" placeholder="filtrar…"></th>
-          <th class="th-mini">CID<input class="filter" data-col="cid" placeholder="filtrar…"></th>
-          <th class="th-shrink">MapLink<input class="filter" data-col="map" placeholder="filtrar…"></th>
-          <th class="th-mini">Partners<input class="filter" data-col="partners" placeholder="filtrar…"></th>
+          <th>KW<br><input data-col="kw" placeholder="filtrar…"></th>
+          <th>State<br><input data-col="state" placeholder="filtrar…"></th>
+          <th>City<br><input data-col="city" placeholder="filtrar…"></th>
+          <th>Colony<br><input data-col="colony" placeholder="filtrar…"></th>
+          <th>Postal Code<br><input data-col="postal" placeholder="filtrar…"></th>
+          <th>Company Name<br><input data-col="name" placeholder="filtrar…"></th>
+          <th>Category<br><input data-col="cat" placeholder="filtrar…"></th>
+          <th>Website<br><input data-col="web" placeholder="filtrar…"></th>
+          <th>Phone<br><input data-col="phone" placeholder="filtrar…"></th>
+          <th>email<br><input data-col="email" placeholder="filtrar…"></th>
+          <th>address<br><input data-col="addr" placeholder="filtrar…"></th>
+          <th>Lat<br><input data-col="lat" placeholder="filtrar…"></th>
+          <th>Lng<br><input data-col="lng" placeholder="filtrar…"></th>
+          <th class="opt xHorario">Horario</th>
+          <th class="opt xPrecio">Precio</th>
+          <th class="opt xMapsUri">Maps URI</th>
+          <th class="opt xFoto">Foto</th>
+          <th class="opt xTipos">Tipo + Subtipos</th>
+          <th class="opt xShort">Short Addr</th>
+          <th class="opt xResumen">Resumen</th>
+          <th class="opt xPartners">Partners</th>
         </tr>
       </thead>
-      <tbody id="tbody"></tbody>
+      <tbody></tbody>
     </table>
   </div>
 </div>
 
 <script>
-const BUILD = document.querySelector('meta[name="build"]').content;
-document.getElementById('build').textContent = BUILD;
-
+/* =============== Utilidades UI =============== */
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
-const log = (m, cls="")=>{
-  const el=$("#log"); el.textContent = el.textContent ? el.textContent+"\\n"+m : m;
-  if(cls) el.className = "console "+cls;
-};
-const setFound = n => $("#found").textContent = n;
-const safeLower = v => (v ?? "").toString().toLowerCase();
-const byCol = key => tr => safeLower(tr.dataset[key]);
-const applyFilters = ()=>{
-  const f={}; $$(".filter").forEach(i=>{ if(i.value.trim()) f[i.dataset.col]=i.value.trim().toLowerCase(); });
-  $$("#tbody tr").forEach(tr=>{
-    let ok=true; for(const k in f){ if(!byCol(k)(tr).includes(f[k])){ ok=false; break; } }
-    tr.style.display = ok? "" : "none";
-  });
-};
-document.addEventListener("input", e=>{ if(e.target.classList.contains("filter")) applyFilters(); });
 
-let RESULTS=[], running=false, mapsLoaded=false;
-
-const loadMaps = key => new Promise((res,rej)=>{
-  if(mapsLoaded) return res();
-  const s=document.createElement("script");
-  s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly`;
-  s.onload=()=>{ mapsLoaded=true; res(); };
-  s.onerror=()=>rej(new Error("No se pudo cargar Maps JS")); document.head.appendChild(s);
-});
-
-const geocoder = ()=> new google.maps.Geocoder();
-function geocodeOne(q){ return new Promise(resolve=>{
-  geocoder().geocode({address:q}, (r,st)=>{
-    if(st==="OK" && r?.[0]){
-      const g=r[0].geometry, loc=g.location;
-      resolve({
-        lat: Number(loc.lat()), lng: Number(loc.lng()),
-        viewport: g.viewport || null,
-        components: parseComps(r[0].address_components||[])
-      });
-    }else resolve(null);
-  });
-});}
-function parseComps(c){
-  const o={country:"",state:"",city:"",postal:"",colony:""};
-  c.forEach(x=>{
-    const ts=x.types||[];
-    if(ts.includes("administrative_area_level_1")) o.state=x.long_name;
-    if(ts.includes("locality")) o.city=x.long_name;
-    if(ts.includes("sublocality")||ts.includes("neighborhood")) o.colony=o.colony||x.long_name;
-    if(ts.includes("postal_code")) o.postal=x.long_name;
-    if(ts.includes("country")) o.country=x.long_name;
-  }); return o;
+function log(msg){
+  const el = $("#log");
+  el.textContent += (el.textContent ? "\n" : "") + msg;
+  el.scrollTop = el.scrollHeight;
 }
 
-async function textSearchAll(key, body){
-  const url="https://places.googleapis.com/v1/places:searchText";
-  const headers={
-    "Content-Type":"application/json",
-    "X-Goog-Api-Key": key,
-    "X-Goog-FieldMask":[
-      "places.id","places.displayName","places.primaryType","places.types",
-      "places.formattedAddress","places.addressComponents","places.shortFormattedAddress",
-      "places.location","places.plusCode",
-      "places.nationalPhoneNumber","places.internationalPhoneNumber",
-      "places.rating","places.userRatingCount","places.priceLevel",
-      "places.googleMapsUri","places.websiteUri",
-      "places.currentOpeningHours.weekdayDescriptions",
-      "places.editorialSummary.text","places.photos.name","nextPageToken"
-    ].join(",")
+/* =============== Métricas (CountAPI + ipapi) =============== */
+(async function updateMetrics(){
+  try{
+    const base = location.host || "maps-extractor-ot.vercel.app";
+    const get = (k)=>fetch(`https://api.countapi.xyz/get/${base}/${k}`).then(r=>r.json()).catch(()=>({value:"—"}));
+    const hit = (k)=>fetch(`https://api.countapi.xyz/hit/${base}/${k}`).then(r=>r.json()).catch(()=>({value:"—"}));
+    const [v1,r1,country] = await Promise.all([get("pageviews"), get("runs"), fetch("https://ipapi.co/json/").then(r=>r.json()).catch(()=>({country_name:"—"}))]);
+    $("#visits").textContent = v1.value ?? "—";
+    $("#runs").textContent = r1.value ?? "—";
+    $("#country").textContent = `${country.country_name || "—"} (${country.country || "?"})`;
+    // Sube contadores
+    hit("pageviews");
+  }catch(e){}
+})();
+
+/* =============== Helpers =============== */
+const sleep = ms => new Promise(r=>setTimeout(r, ms));
+function val(id){ return $(id).value.trim(); }
+function arrLines(id){
+  const t = $(id).value.trim();
+  if(!t) return [];
+  return t.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+}
+function uniqBy(arr, key){
+  const map = new Map();
+  for (const x of arr) map.set(key(x), x);
+  return [...map.values()];
+}
+function toCSV(rows){
+  const esc = s => `"${String(s??"").replace(/"/g,'""')}"`;
+  const header = Object.keys(rows[0]||{}).map(esc).join(",");
+  const body = rows.map(r=>Object.values(r).map(esc).join(",")).join("\n");
+  return header + "\n" + body;
+}
+function downloadFile(name, data, mime="text/csv"){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([data], {type:mime}));
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* =============== Columnas Opcionales (visibilidad) =============== */
+function syncOptionalCols(){
+  const opts = ["xHorario","xPrecio","xMapsUri","xFoto","xTipos","xShort","xResumen","xPartners"];
+  for(const o of opts){
+    const on = $("#"+o).checked;
+    $$(".opt."+o).forEach(th => th.style.display = on ? "" : "none");
+    const idx = [...thRow.children].findIndex(c=>c.classList.contains(o));
+    if(idx>=0){
+      // cuerpo: mismas columnas
+      [...tbody.rows].forEach(row=>{
+        const cell = row.children[idx];
+        if(cell) cell.style.display = on ? "" : "none";
+      });
+    }
+  }
+}
+
+/* =============== Geocoding (por CP o texto) =============== */
+async function geocodeText(address, apiKey){
+  const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+  url.searchParams.set("address", address);
+  url.searchParams.set("key", apiKey);
+  const r = await fetch(url.href);
+  const j = await r.json();
+  if(j.status!=="OK" || !j.results?.length) throw new Error("No geocoding result");
+  const g = j.results[0];
+  const loc = g.geometry.location;
+  return {
+    lat: loc.lat, lng: loc.lng,
+    postal: (g.address_components||[]).find(c=>c.types.includes("postal_code"))?.long_name || "",
+    state: (g.address_components||[]).find(c=>c.types.includes("administrative_area_level_1"))?.long_name || "",
+    city: (g.address_components||[]).find(c=>c.types.includes("locality")||c.types.includes("postal_town"))?.long_name || "",
+    colony: (g.address_components||[]).find(c=>c.types.includes("sublocality") || c.types.includes("sublocality_level_1"))?.long_name || "",
+    formatted: g.formatted_address
   };
-  let out=[], token=null, page=0;
-  do{
-    const payload = token ? {...body, pageToken: token} : body;
-    console.log("[payload "+BUILD+"]",payload);
-    const r=await fetch(url,{method:"POST",headers,body:JSON.stringify(payload)});
-    if(!r.ok){ throw new Error(await r.text().catch(()=>r.statusText)); }
-    const j=await r.json();
-    out.push(...(j.places||[]));
-    token=j.nextPageToken||null; page++;
-  }while(token && page<3);
+}
+
+/* =============== Places v1: searchText + paginación =============== */
+async function textSearchAll({apiKey, textQuery, center, radiusMeters, fieldMask}){
+  const out = [];
+  let pageToken = null;
+  for(let round=0; round<8; round++){ // hasta ~160 resultados (depende disponibilidad)
+    const body = pageToken ? {pageToken} : {
+      textQuery,
+      languageCode:"es",
+      locationBias:{
+        circle:{
+          center:{ latLng:{ latitude:center.lat, longitude:center.lng } },
+          radius: radiusMeters
+        }
+      }
+    };
+    const r = await fetch("https://places.googleapis.com/v1/places:searchText", {
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": fieldMask
+      },
+      body: JSON.stringify(body)
+    });
+    if(!r.ok){
+      const t = await r.text().catch(()=>r.statusText);
+      throw new Error(`HTTP ${r.status} en searchText: ${t}`);
+    }
+    const j = await r.json();
+    const arr = j.places || [];
+    out.push(...arr);
+    pageToken = j.nextPageToken || null;
+    if(!pageToken) break;
+    await sleep(1100); // respeta cuota/paginación
+  }
   return out;
 }
 
-// Partners & Email
-const isGoogleHost = u => /(^|\.)google\.(com|[a-z.]+)\/?/i.test(u||"") || /(^|\.)g\.page/i.test(u||"") || /(^|\.)goo\.gl/i.test(u||"");
-async function detectPartnersFromWebsite(website){
-  const w=(website||"").trim();
-  if(!w || isGoogleHost(w)) return "";
+/* =============== Place Details (website) =============== */
+async function fetchDetails(apiKey, placeId){
+  const url = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`;
+  const heads = {
+    "X-Goog-Api-Key": apiKey,
+    "X-Goog-FieldMask": "id,websiteUri"
+  };
+  const r = await fetch(url, {headers: heads});
+  if(!r.ok) return {};
+  return r.json();
+}
+
+/* =============== Email y Partners via r.jina.ai =============== */
+function extractEmails(text){
+  const re = /([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+)\.([a-zA-Z]{2,})/g;
+  const set = new Set();
+  text.replace(re,(m)=>{ if(m.length<=120) set.add(m.toLowerCase());});
+  return [...set].join(" | ");
+}
+function detectPartners(text,url){
+  const low = (text||"").toLowerCase();
+  const tests = [
+    ["OpenTable","opentable"],
+    ["UberEats","ubereats"],
+    ["Rappi","rappi"],
+    ["DoorDash","doordash"],
+    ["Didi Food","didi food"],
+    ["Resy","resy"],
+    ["Tock","exploretock"]
+  ];
+  const hits = [];
+  for(const [label,needle] of tests){
+    if(low.includes(needle)) hits.push(label);
+  }
+  // pistas de reserva/delivery genéricas
+  const flags = [
+    ["Reservas","reserv"],
+    ["Delivery","delivery"],
+    ["Pedido","pedido"],
+    ["Order","order"]
+  ];
+  for(const [label,needle] of flags){
+    if(low.includes(needle)) hits.push(label);
+  }
+  // dominio mismo
+  if((url||"").includes("opentable")) hits.push("OpenTable (dominio)");
+  return [...new Set(hits)].join(" | ");
+}
+async function fetchSiteText(url, timeoutMs=15000){
+  if(!/^https?:\/\//i.test(url)) return "";
+  const ctl = new AbortController();
+  const t = setTimeout(()=>ctl.abort(), timeoutMs);
   try{
-    const url="https://r.jina.ai/http/"+w.replace(/^https?:\/\//,"");
-    const r=await fetch(url,{cache:"no-store"});
+    const prox = "https://r.jina.ai/http/" + url.replace(/^https?:\/\//,'');
+    const r = await fetch(prox, {signal: ctl.signal});
     if(!r.ok) return "";
-    const html=(await r.text()).toLowerCase();
-    const hits=[];
-    if(html.includes("opentable")) hits.push("OpenTable");
-    if(html.includes("ubereats")) hits.push("UberEats");
-    if(html.includes("rappi")) hits.push("Rappi");
-    if(html.includes("didi food")||html.includes("didifood")) hits.push("DiDi Food");
-    if(html.includes("doordash")) hits.push("DoorDash");
-    if(html.includes("grubhub")) hits.push("Grubhub");
-    if(html.includes("postmates")) hits.push("Postmates");
-    return [...new Set(hits)].join(", ");
-  }catch(_){return"";}
-}
-async function tryEmail(website, waitSec){
-  const w=(website||"").trim(); if(!w || isGoogleHost(w)) return "";
-  const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(), Math.max(0,waitSec|0)*1000);
-  try{
-    const r=await fetch("https://r.jina.ai/http/"+w.replace(/^https?:\/\//,""),{signal:ctrl.signal,cache:"no-store"});
-    if(!r.ok) return "";
-    const tx=await r.text();
-    const m=tx.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig);
-    return m?[...new Set(m)].slice(0,3).join(" / "):"";
-  }catch(_){return"";} finally{ clearTimeout(to); }
+    return await r.text();
+  }catch(e){ return ""; } finally{ clearTimeout(t); }
 }
 
-function pushRow(row){
-  RESULTS.push(row);
-  const tr=document.createElement("tr");
-  const cols=["kw","state","city","colony","name","category","website","phone","email","address","postal","lat","lng","types","price","hours","summary","photo","reviews","rating","cid","map","partners"];
-  cols.forEach(c=>{const td=document.createElement("td"); td.textContent=row[c]||""; tr.appendChild(td); tr.dataset[c]=(row[c]||"")+"";});
-  $("#tbody").appendChild(tr); setFound(RESULTS.length);
+/* =============== Tabla =============== */
+const tbody = $("#tbl tbody");
+const thRow = $("#tbl thead tr");
+let allRows = [];
+
+function clearTable(){
+  tbody.innerHTML = "";
+  allRows.length = 0;
+  $("#count").textContent = "0";
 }
+function pushRow(obj){
+  allRows.push(obj);
+  const tr = document.createElement("tr");
 
-$("#btnStart").addEventListener("click", async ()=>{
-  if(running) return;
-  RESULTS=[]; $("#tbody").innerHTML=""; setFound(0); log("Iniciando…"); running=true;
-  try{
-    const key=$("#apiKey").value.trim(); if(!key){ running=false; return log("Coloca tu API Key","err"); }
-    await loadMaps(key);
-
-    const radiusKm=+($("#radiusKm").value||3), radiusM=Math.max(1,radiusKm)*1000;
-    const wantLatLng=$("#wantLatLng").checked, wantWebsite=$("#wantWebsite").checked, wantEmail=$("#wantEmail").checked;
-    const exHorario=$("#exHorario").checked, exPrecio=$("#exPrecio").checked, exMapsUri=$("#exMapsUri").checked, exFoto=$("#exFoto").checked, exTipos=$("#exTipos").checked, exShort=$("#exShortAddr").checked, exResumen=$("#exResumen").checked, exPartners=$("#exPartners").checked;
-
-    const KW=$("#kw").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-    const CITS=$("#cities").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-    const STS=$("#states").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-    const COLS=$("#colonies").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-    const ZIPS=$("#zips").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-
-    if(!KW.length || (!CITS.length && !ZIPS.length)){ running=false; return log("Pon al menos una Keyword y una Ciudad (o un CP).","err"); }
-
-    const combos=[];
-    ZIPS.forEach(cp=>combos.push({label:`CP: ${cp}`, geostr:cp}));
-    if(CITS.length){
-      const states=STS.length?STS:[""], cols=COLS.length?COLS:[""];
-      for(const city of CITS){ for(const st of states){ for(const col of cols){
-        const label=[col,city,st].filter(Boolean).join(", "); combos.push({label, geostr:label});
-      } } }
+  const cols = [
+    "kw","state","city","colony","postal","name","cat","web","phone","email",
+    "addr","lat","lng","Horario","Precio","MapsURI","Foto","Tipos","ShortAddr","Resumen","Partners"
+  ];
+  for(const k of cols){
+    const td = document.createElement("td");
+    const v = obj[k] ?? "";
+    if(k==="web" && v){
+      td.innerHTML = `<a href="${v}" target="_blank" rel="noreferrer">${v}</a>`;
+    }else if(k==="MapsURI" && v){
+      td.innerHTML = `<a href="${v}" target="_blank" rel="noreferrer">Abrir</a>`;
+    }else{
+      td.textContent = v;
     }
-    log(`Se generaron ${combos.length} ubicacione(s).`);
+    td.className = (["Horario","Precio","MapsURI","Foto","Tipos","ShortAddr","Resumen","Partners"].includes(k) ? "opt c-"+k : "");
+    tr.appendChild(td);
+  }
+  tbody.appendChild(tr);
+  $("#count").textContent = String(allRows.length);
+  syncOptionalCols();
+}
+function applyFilters(){
+  const f = {};
+  $$("#tbl thead input[data-col]").forEach(i=>f[i.dataset.col]=i.value.toLowerCase());
+  for(const tr of tbody.rows){
+    const data = Array.from(tr.cells).map(td=>(td.textContent||"").toLowerCase());
+    const map = {
+      kw: data[0], state: data[1], city: data[2], colony: data[3], postal: data[4],
+      name: data[5], cat: data[6], web: data[7], phone: data[8], email: data[9],
+      addr: data[10], lat: data[11], lng: data[12]
+    };
+    let ok = true;
+    for(const k in f){
+      if(f[k] && !(map[k]||"").includes(f[k])){ ok=false;break; }
+    }
+    tr.style.display = ok ? "" : "none";
+  }
+}
+$$("#tbl thead input[data-col]").forEach(i=>i.addEventListener("input", applyFilters));
 
-    for(const c of combos){
-      const g=await geocodeOne(c.geostr);
-      if(!g){ log(`No se pudo geocodificar: ${c.geostr}`,"warn"); continue; }
-      const centerLL={ latitude:Number(g.lat), longitude:Number(g.lng) };
+/* =============== FieldMask para Places v1 =============== */
+function buildFieldMask(){
+  const base = [
+    "places.id",
+    "places.displayName",
+    "places.primaryType",
+    "places.types",
+    "places.formattedAddress",
+    "places.addressComponents",
+    "places.location",
+    "places.plusCode",
+    "places.businessStatus",
+    "places.nationalPhoneNumber",
+    "places.internationalPhoneNumber",
+    "places.rating",
+    "places.userRatingCount",
+    "places.priceLevel",
+    "places.googleMapsUri",
+    "places.currentOpeningHours.openNow",
+    "places.currentOpeningHours.weekdayDescriptions",
+    "places.primaryTypeDisplayName",
+    "places.editorialSummary",
+    "nextPageToken"
+  ];
+  // ojo: 'places.subtypes' NO existe en v1 → usamos places.types
+  return base.join(",");
+}
 
-      for(const kw of KW){
-        log(`Buscando "${kw}" @ "${c.label}" (radio ${radiusKm} km)…`);
-        const body={
-          textQuery: kw,
-          pageSize: 20,
-          locationBias:{ circle:{ center:centerLL, radius: radiusM } }
-        };
-        let places=[];
-        try{ places=await textSearchAll(key, body); }
-        catch(e){ log(`Error "${kw}" @ "${c.label}": ${e.message}`,"err"); continue; }
+/* =============== Start =============== */
+$("#start").addEventListener("click", async ()=>{
+  const apiKey = $("#apikey").value.trim();
+  if(!apiKey){ log("⚠️ Coloca tu API Key"); return; }
+
+  // métrica de run
+  fetch(`https://api.countapi.xyz/hit/${location.host||"maps-extractor-ot.vercel.app"}/runs`).catch(()=>{});
+
+  clearTable();
+  $("#log").textContent = "Iniciando…";
+
+  const keywords = arrLines("#kw");
+  const cities   = arrLines("#cities");
+  const states   = arrLines("#states");
+  const colonies = arrLines("#colonies");
+  const zips     = arrLines("#zips");
+  const radiusKm = parseFloat($("#radiusKm").value) || 3;
+  const wantLatLng = $("#wantLatLng").checked;
+  const wantWebsite = $("#wantWebsite").checked;
+  const wantEmail = $("#wantEmail").checked;
+  const emailWait = Math.max(3, parseInt($("#emailWait").value || "10",10));
+
+  if(!keywords.length || (!cities.length && !zips.length)){
+    log("⚠️ Debes escribir al menos un keyword y ciudad o CP.");
+    return;
+  }
+
+  // generar seeds de ubicación
+  let seeds = [];
+  const country = "MX"; // puedes permitir cambiar esto en UI si lo deseas
+
+  if(zips.length){
+    for(const zip of zips){
+      // si hay ciudad/estado, mejor precisión
+      const ctx = [zip, cities[0]||"", states[0]||"", country].filter(Boolean).join(", ");
+      seeds.push({ label:`CP ${zip}`, query: ctx, zip });
+    }
+  }else{
+    // colonia + ciudad + estado
+    const combos = [];
+    const ci = cities.length?cities:[""];
+    const st = states.length?states:[""];
+    const co = colonies.length?colonies:[""];
+    for(const c of ci) for(const s of st) for(const col of co){
+      const q = [col,c,s,country].filter(Boolean).join(", ");
+      combos.push({label:`${col||""} ${c} ${s}`.trim(), query:q});
+    }
+    seeds = combos;
+  }
+
+  log(`Se generaron ${seeds.length} ubicación(es).`);
+
+  // FieldMask
+  const fieldMask = buildFieldMask();
+
+  // iterar combinaciones
+  const radiusMeters = Math.max(1, radiusKm) * 1000;
+  const resultsSet = new Map(); // deduplicar por place.id + kw
+
+  for(const seed of seeds){
+    log(`Buscando "${keywords.join(" | ")}" @ "${seed.label}" (radio ${radiusKm} km)…`);
+    // geocode seed
+    let center;
+    try{
+      const g = await geocodeText(seed.query, apiKey);
+      center = {lat:g.lat, lng:g.lng};
+    }catch(e){
+      log(`⚠️ No se pudo geocodificar: ${seed.query}`);
+      continue;
+    }
+
+    for(const kw of keywords){
+      try{
+        const places = await textSearchAll({
+          apiKey, textQuery: kw, center, radiusMeters, fieldMask
+        });
 
         for(const p of places){
-          const name=p.displayName?.text||"", phone=p.nationalPhoneNumber||p.internationalPhoneNumber||"", cat=p.primaryType||(p.types||[]).join(", ");
-          const ac=parseComps(p.addressComponents||[]);
-          const state=ac.state||g.components.state||"", city=ac.city||g.components.city||"", colony=ac.colony||g.components.colony||"", postal=ac.postal||"";
-          const address = exShort?(p.shortFormattedAddress||""):(p.formattedAddress||"");
-          const lat = p.location?.latitude?.toFixed(6)||"", lng=p.location?.longitude?.toFixed(6)||"";
-          const rating=p.rating??"", reviews=p.userRatingCount??"", price=exPrecio?(p.priceLevel??""):"";
-          const types=exTipos? [p.primaryType,...(p.types||[])].filter(Boolean).join(" / "):"";
-          const hours=exHorario? (p.currentOpeningHours?.weekdayDescriptions||[]).join(" | "):"";
-          const summary=exResumen? (p.editorialSummary?.text||""):"";
-          const mapUri= p.googleMapsUri||"";
-          const website = wantWebsite ? (p.websiteUri||"") : "";
-          const photo= exFoto ? (p.photos?.[0]?.name||"") : "";
-          let email = wantEmail? await tryEmail(website, +($("#emailWait").value||10)) : "";
-          let cid=""; if(mapUri && mapUri.indexOf("cid=")>-1){ const m=mapUri.match(/[?&]cid=([0-9]+)/); if(m) cid=m[1]; }
-          let partners=""; if(exPartners && website && !isGoogleHost(website)){ partners = await detectPartnersFromWebsite(website); }
+          const ac = p.addressComponents || [];
+          const get = t => ac.find(c=>c.types?.includes(t))?.longText || ac.find(c=>c.types?.includes(t))?.long_name || "";
+          const state = get("administrative_area_level_1");
+          const city = get("locality") || get("postal_town");
+          const colony = get("sublocality") || get("sublocality_level_1");
+          const postal = get("postal_code");
+          const lat = p.location?.latitude || p.location?.latLng?.latitude || "";
+          const lng = p.location?.longitude || p.location?.latLng?.longitude || "";
+          const phone = p.nationalPhoneNumber || p.internationalPhoneNumber || "";
+          const price = typeof p.priceLevel==="number" ? ["Free","$","$$","$$$","$$$$"][p.priceLevel] || "" : "";
+          const horario = p.currentOpeningHours?.weekdayDescriptions?.join(" | ") || (p.currentOpeningHours?.openNow!=null? ("Abierto ahora: " + (p.currentOpeningHours.openNow?"Sí":"No")) : "");
+          const tipos = [p.primaryTypeDisplayName || p.primaryType, ...(p.types||[])].filter(Boolean).join(" | ");
+          const shortAddr = p.shortFormattedAddress || "";
+          const resumen = p.editorialSummary?.text || "";
+          const mapsURI = p.googleMapsUri || "";
 
-          pushRow({
-            kw, state, city, colony, name, category:cat, website, phone, email, address, postal,
-            lat: wantLatLng?lat:"", lng: wantLatLng?lng:"", types, price, hours, summary, photo,
-            reviews:String(reviews), rating:String(rating), cid, map: exMapsUri?mapUri:"", partners
-          });
+          // website & email opcional
+          let website = "";
+          if(wantWebsite){
+            try{
+              const det = await fetchDetails(apiKey, p.id);
+              website = det.websiteUri || "";
+            }catch(e){}
+          }
+          let email = "";
+          let partners = "";
+          if((wantEmail || $("#xPartners").checked) && website){
+            const txt = await fetchSiteText(website, emailWait*1000).catch(()=> "");
+            if(wantEmail) email = extractEmails(txt);
+            if($("#xPartners").checked) partners = detectPartners(txt, website);
+          }
+
+          const key = `${kw}__${p.id}`;
+          if(resultsSet.has(key)) continue;
+
+          const row = {
+            kw: kw,
+            state: state, city: city, colony: colony, postal: postal,
+            name: p.displayName?.text || p.displayName || "",
+            cat: p.primaryTypeDisplayName || p.primaryType || "",
+            web: website, phone: phone, email: email,
+            addr: p.formattedAddress || "",
+            lat: wantLatLng ? lat : "",
+            lng: wantLatLng ? lng : "",
+            Horario: $("#xHorario").checked ? horario : "",
+            Precio: $("#xPrecio").checked ? price : "",
+            MapsURI: $("#xMapsUri").checked ? mapsURI : "",
+            Foto: $("#xFoto").checked ? (p.photos?.[0]?.name ? `https://places.googleapis.com/v1/${encodeURIComponent(p.photos[0].name)}/media?maxHeightPx=200&key=${apiKey}` : "") : "",
+            Tipos: $("#xTipos").checked ? tipos : "",
+            ShortAddr: $("#xShort").checked ? shortAddr : "",
+            Resumen: $("#xResumen").checked ? resumen : "",
+            Partners: $("#xPartners").checked ? partners : ""
+          };
+          resultsSet.set(key,row);
+          pushRow(row);
         }
+
+      }catch(e){
+        log(`❌ Error "${kw}" @ "${seed.label}": ${e.message}`);
       }
+      await sleep(500); // cortesía
     }
-    log("Proceso finalizado. Lugares únicos: "+RESULTS.length);
-  }catch(e){ log("Error general: "+(e?.message||e),"err"); }
-  finally{ running=false; }
+  }
+
+  const uniques = allRows.length;
+  log(`Proceso finalizado. Lugares únicos: ${uniques}.`);
 });
 
-$("#btnDownload").addEventListener("click", ()=>{
-  if(!RESULTS.length) return log("No hay datos para descargar.","warn");
-  const cols=["kw","state","city","colony","name","category","website","phone","email","address","postal","lat","lng","types","price","hours","summary","photo","reviews","rating","cid","map","partners"];
-  const head=cols.map(c=>JSON.stringify(c)).join(",");
-  const rows=RESULTS.map(r=>cols.map(c=>JSON.stringify(r[c]??"")).join(","));
-  const csv=[head,...rows].join("\\n");
-  const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"}); const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob); a.download="places.csv"; document.body.appendChild(a); a.click(); a.remove();
+$("#download").addEventListener("click", ()=>{
+  if(!allRows.length){ log("No hay datos para descargar."); return; }
+  const csv = toCSV(allRows);
+  downloadFile(`places_${new Date().toISOString().slice(0,10)}.csv`, csv);
 });
 
-["kw","cities","states","colonies","zips"].forEach(id=>{
-  $("#"+id).addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)) $("#btnStart").click(); });
-});
+
+/* =============== Inicialización de UI =============== */
+const optInputs = ["#xHorario","#xPrecio","#xMapsUri","#xFoto","#xTipos","#xShort","#xResumen","#xPartners"];
+optInputs.forEach(s => $(s).addEventListener("change", syncOptionalCols));
+syncOptionalCols();
+
 </script>
 </body>
 </html>
