@@ -4,479 +4,497 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Scrapping Tool — Google Places</title>
+
+<!-- Favicon simple para evitar 404 -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><rect width='128' height='128' rx='24' fill='%230b0b0b'/><text x='50%' y='58%' dominant-baseline='middle' text-anchor='middle' font-size='68' fill='%231db954'>S</text></svg>">
+
 <style>
   :root{
-    --bg:#0f1115; --panel:#151923; --muted:#7c8193; --text:#e6e6e6;
-    --accent:#22c55e; --chip:#1f2430; --chip-b:#2a3040; --danger:#ef4444;
-    --border:#232838; --pill:#0b1220;
+    --bg:#0b0b0b; --panel:#151923; --muted:#9aa1b4; --text:#eaeef5; --accent:#22c55e;
+    --chip:#1e2535; --border:#2a3042; --pill:#0f1524; --warn:#f59e0b;
   }
   *{box-sizing:border-box}
-  body{
-    margin:0; font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial;
-    background:var(--bg); color:var(--text);
-  }
-  .wrap{max-width:1400px; margin:24px auto; padding:0 16px;}
+  html,body{height:100%; margin:0; font:14px/1.45 system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial; background:var(--bg); color:var(--text)}
+  .wrap{max-width:1600px; margin:22px auto; padding:0 16px}
+
+  /* Barra superior con todas las opciones */
   .toolbar{
-    display:grid; grid-template-columns: 1.5fr 1.5fr 1fr auto auto auto auto auto 1fr auto auto;
-    gap:10px; align-items:center; background:var(--panel); padding:12px; border-radius:14px; border:1px solid var(--border);
+    display:grid;
+    grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr 0.9fr 0.7fr auto auto;
+    gap:10px; background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:12px; align-items:start
   }
-  .toolbar label{font-size:12px; color:var(--muted); display:block; margin-bottom:4px;}
-  textarea, input[type="text"], input[type="number"]{
-    width:100%; background:#0c1020; color:var(--text); border:1px solid var(--border);
-    border-radius:10px; padding:10px 12px; outline:none;
+  .grp{ display:flex; flex-direction:column; gap:6px }
+  .lbl{ font-size:12px; color:var(--muted) }
+  textarea, input[type="text"], input[type="number"], select{
+    width:100%; background:#0e1222; color:var(--text); border:1px solid var(--border); border-radius:10px; padding:10px; resize:vertical; outline:none
   }
-  textarea{height:48px; resize:vertical;}
-  .switch{display:flex; align-items:center; gap:6px; background:var(--chip); border:1px solid var(--border); padding:8px 10px; border-radius:12px;}
-  .switch input{accent-color:var(--accent); transform:scale(1.1)}
-  .btn{
-    background:var(--chip-b); color:#fff; padding:10px 14px; border:1px solid var(--border); border-radius:12px; cursor:pointer;
-  }
-  .btn.primary{background:var(--accent); color:#05170c; border-color:#1aa34d; font-weight:600;}
-  .btn:disabled{opacity:.5; cursor:not-allowed}
-  .note{color:var(--muted); font-size:12px}
+  textarea{ height:60px }
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; background:#0e1222; border:1px solid var(--border); border-radius:12px; padding:10px; min-height:60px }
+  .chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; background:var(--chip); border:1px solid var(--border); border-radius:999px; font-size:12px; color:#d8def0 }
+  .actions{ display:flex; gap:8px; align-items:center; justify-content:flex-end }
+  button{ background:var(--accent); color:#07180c; border:0; border-radius:999px; padding:10px 14px; font-weight:600; cursor:pointer }
+  .ghost{ background:#2a3042; color:#e5e7eb }
+
   .status{
-    margin:14px 0; background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:12px;
-    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    max-height:160px; overflow:auto; white-space:pre-wrap;
+    margin:12px 0; background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:12px;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; max-height:160px; overflow:auto; white-space:pre-wrap
   }
-  table{
-    width:100%; border-collapse:separate; border-spacing:0; margin-top:14px; background:var(--panel); border:1px solid var(--border); border-radius:14px; overflow:hidden;
-  }
-  th, td{padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:top;}
-  th{background:#121725; position:sticky; top:0; z-index:2; text-align:left;}
-  tr:last-child td{border-bottom:none}
-  .pill{display:inline-block; padding:4px 8px; border-radius:999px; background:var(--pill); border:1px solid var(--border); color:var(--muted); font-size:12px}
-  .count{display:inline-grid; place-items:center; width:32px; height:32px; border-radius:8px; background:#0b1322; border:1px solid var(--border); font-weight:700}
-  .small{width:80px}
-  .fit{width:120px}
-  .w-160{width:160px}
-  a{color:#77b2ff; text-decoration:none}
-  a:hover{text-decoration:underline}
+  .metrics{ display:flex; align-items:center; gap:12px; color:var(--muted); margin-bottom:6px }
+  .pill{ display:inline-block; padding:4px 8px; border-radius:999px; background:var(--pill); border:1px solid var(--border); color:var(--muted); font-size:12px }
+
+  .table-wrap{ margin-top:10px; background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:8px; overflow:auto }
+  table{ width:3200px; border-collapse:separate; border-spacing:0 }
+  thead th{ position:sticky; top:0; z-index:1; background:#0f1526; color:#cbd5e1; text-align:left; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border) }
+  tbody td{ padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; font-size:14px; white-space:nowrap }
+  a{ color:#93c5fd; text-decoration:none } a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h2 style="margin:0 0 12px 6px;">Scrapping Tool <span class="note">— Google Maps Places API</span></h2>
+  <h2 style="margin:0 0 12px 6px;">Scrapping Tool <span style="color:var(--muted); font-weight:400">— Google Maps Places</span></h2>
 
-  <!-- Toolbar horizontal -->
-  <div class="toolbar" id="toolbar">
-    <div>
-      <label>Keywords</label>
-      <textarea id="kw" placeholder="Restaurante, Gimnasio... (una o varias, separadas por coma o nueva línea)">Restaurante</textarea>
-    </div>
-    <div>
-      <label>Ubicaciones (una por línea: ciudad / colonia / CP)</label>
-      <textarea id="loc" placeholder="Hermosillo Sonora&#10;Nogales Sonora&#10;83000"></textarea>
-    </div>
-    <div>
-      <label>API Key</label>
-      <input id="apiKey" type="text" placeholder="Pega aquí tu Key">
+  <!-- BARRA COMPLETA -->
+  <div class="toolbar">
+    <div class="grp">
+      <div class="lbl">AC / Prospect (aplica a todos los resultados)</div>
+      <select id="acType">
+        <option value="">—</option>
+        <option value="AC">AC</option>
+        <option value="Prospect">Prospect</option>
+      </select>
     </div>
 
-    <div class="fit">
-      <label>Radio (km)</label>
+    <div class="grp">
+      <div class="lbl">Keywords</div>
+      <textarea id="kw" placeholder="Restaurante&#10;Pizzería"></textarea>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">Ciudad(es)</div>
+      <textarea id="ciudades" placeholder="Hermosillo&#10;Nogales"></textarea>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">Estado(s)</div>
+      <textarea id="estados" placeholder="Sonora&#10;Sinaloa"></textarea>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">Colonia(s) (opcional)</div>
+      <textarea id="colonias" placeholder="Centro&#10;Pitic"></textarea>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">Códigos postales (opcional)</div>
+      <textarea id="zips" placeholder="83000&#10;83260"></textarea>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">API Key</div>
+      <input id="apiKey" type="text" placeholder="Pegar aquí la Key">
+      <div class="chips" style="margin-top:6px">
+        <label class="chip"><input id="t-latlng" type="checkbox" checked>Lat &amp; Long</label>
+        <label class="chip"><input id="t-website" type="checkbox" checked>Website</label>
+        <label class="chip"><input id="t-email" type="checkbox">Email</label>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">Radio por consulta (km)</div>
       <input id="radiusKm" type="number" min="1" max="50" value="3">
+      <div class="lbl" style="margin-top:8px">Seg máx. email</div>
+      <input id="maxEmailSec" type="number" min="3" max="30" value="10">
     </div>
 
-    <div class="switch"><input id="tgLatLng" type="checkbox" checked><span>Lat &amp; Long</span></div>
-    <div class="switch"><input id="tgWebsite" type="checkbox" checked><span>Website</span></div>
-    <div class="switch"><input id="tgEmail" type="checkbox"><span>Email</span></div>
-    <div class="small">
-      <label>Seg máx. email</label>
-      <input id="emailSecs" type="number" min="3" max="30" value="10">
+    <div class="grp">
+      <div class="lbl">Campos extra</div>
+      <div class="chips">
+        <label class="chip"><input id="x-hours" type="checkbox">Horario</label>
+        <label class="chip"><input id="x-price" type="checkbox">Precio</label>
+        <label class="chip"><input id="x-mapsuri" type="checkbox">Maps URI</label>
+        <label class="chip"><input id="x-photo" type="checkbox">Foto</label>
+        <label class="chip"><input id="x-types" type="checkbox" checked>Tipo + Subtipos</label>
+        <label class="chip"><input id="x-short" type="checkbox">Short Addr</label>
+        <label class="chip"><input id="x-summary" type="checkbox">Resumen</label>
+        <label class="chip"><input id="x-partners" type="checkbox" checked>Partners (Reserva/Delivery)</label>
+      </div>
     </div>
 
-    <div class="switch"><input id="tgResDel" type="checkbox" checked><span>Reservas/Delivery</span></div>
-
-    <button class="btn primary" id="btnStart">Iniciar extracción</button>
-    <button class="btn" id="btnDownload">Descargar</button>
+    <div class="actions">
+      <button id="start">Iniciar</button>
+      <button id="download" class="ghost">Descargar</button>
+    </div>
   </div>
 
-  <div class="status" id="log">Listo para iniciar…</div>
-
-  <div style="display:flex; gap:10px; align-items:center; margin:8px 0;">
-    <div class="pill">Resultados: <b id="found">0</b></div>
-    <div class="pill">Ubicación: <span id="country">—</span></div>
+  <div class="metrics">
+    <span class="pill">👁️ Visitas: <b id="m-visits">—</b></span>
+    <span class="pill">⚙️ Extracciones: <b id="m-runs">—</b></span>
+    <span class="pill">📍 País: <b id="m-country">…</b></span>
   </div>
+  <pre class="status" id="log">Listo para iniciar…</pre>
 
-  <table id="tbl">
-    <thead>
-      <tr>
-        <th class="w-160">KW</th>
-        <th>State</th>
-        <th>City</th>
-        <th>Colony</th>
-        <th>Company Name</th>
-        <th>Category</th>
-        <th>Website</th>
-        <th>Phone</th>
-        <th>email</th>
-        <th>address</th>
-        <th>Postal Code</th>
-        <th>MapLink</th>
-        <th>Reserva</th>
-        <th>Delivery</th>
-        <th>Lat</th>
-        <th>Lng</th>
-        <th>Rating</th>
-        <th>#Reviews</th>
-      </tr>
-    </thead>
-    <tbody id="tbody"></tbody>
-  </table>
+  <!-- TABLA COMPLETA (todas las columnas que pediste) -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>AC or Prospect</th>
+          <th>KW</th>
+          <th>State</th>
+          <th>City</th>
+          <th>Colony</th>
+          <th>Company Name</th>
+          <th>Category</th>
+          <th>Website</th>
+          <th>Phone</th>
+          <th>email</th>
+          <th>address</th>
+          <th>Postal Code + City</th>
+          <th>state</th>
+          <th>pin code</th>
+          <th># Reviews</th>
+          <th>Review</th>
+          <th>CID</th>
+          <th>MapLink</th>
+          <th>Lat</th>
+          <th>Lng</th>
+          <th>Tipo + Subtipos</th>
+          <th>Precio</th>
+          <th>Horario</th>
+          <th>Resumen</th>
+          <th>Foto</th>
+          <th>Partners</th>
+        </tr>
+      </thead>
+      <tbody id="body"></tbody>
+    </table>
+  </div>
 </div>
 
 <script>
-/* =============== UTILIDADES UI =============== */
-const $ = s => document.querySelector(s);
-const logBox = $('#log'); const tbody = $('#tbody');
-const foundEl = $('#found'); const countryEl = $('#country');
+  const $ = s => document.querySelector(s);
+  const log = (m,k="")=>{ const el=$("#log"); el.textContent+=(el.textContent?"\n":"")+m; el.scrollTop=el.scrollHeight; console[(k==="err"?"error":k==="warn"?"warn":"log")](m); };
+  const setVisits = v => $("#m-visits").textContent = v ?? "—";
+  const setRuns = v => $("#m-runs").textContent = v ?? "—";
+  const setCountry = v => $("#m-country").textContent = v ?? "—";
 
-function log(msg){
-  logBox.textContent += (logBox.textContent ? '\n' : '') + msg;
-  logBox.scrollTop = logBox.scrollHeight;
-}
-function setFound(n){ foundEl.textContent = n; }
+  // Métricas (silenciosas si fallan)
+  const NS = location.host || "localdev";
+  const capi = (kind,key)=>fetch(`https://api.countapi.xyz/${kind}/${encodeURIComponent(NS)}/${encodeURIComponent(key)}`).then(r=>r.ok?r.json():null).catch(()=>null);
+  (async()=>{
+    try{ const v=await capi("get","pageviews"); setVisits(v?.value); }catch{}
+    try{ const r=await capi("get","runs"); setRuns(r?.value); }catch{}
+    try{ const ip=await fetch("https://ipapi.co/json/"); const j=await ip.json(); setCountry(`${j.country_name||j.country||"?"} (${j.country||"?"})`); }catch{}
+  })();
 
-async function detectCountry(){
-  try{
-    const res = await fetch('https://ipapi.co/country_name/');
-    const txt = await res.text();
-    countryEl.textContent = txt || '—';
-  }catch{ countryEl.textContent = '—'; }
-}
-detectCountry();
-
-/* =============== Detección Reservas/Delivery =============== */
-const PARTNER_DOMAINS = [
-  // dominios
-  { key:'OpenTable', type:'reservation', host:'opentable.' },
-  { key:'UberEats',  type:'delivery',   host:'ubereats.' },
-  { key:'Rappi',     type:'delivery',   host:'rappi.' },
-  { key:'DiDi Food', type:'delivery',   host:'didi-food.' },
-  { key:'DoorDash',  type:'delivery',   host:'doordash.' },
-  { key:'PedidosYa', type:'delivery',   host:'pedidosya.' },
-  { key:'Just Eat',  type:'delivery',   host:'just-eat.' },
-  { key:'Glovo',     type:'delivery',   host:'glovo.' },
-  { key:'SinDelantal', type:'delivery', host:'sindelantal.' }
-];
-const PARTNER_KEYWORDS = [
-  // palabras clave por si no aparece el dominio pero sí el nombre
-  { key:'OpenTable', type:'reservation', kw:'opentable' },
-  { key:'UberEats',  type:'delivery',    kw:'uber eats' },
-  { key:'Rappi',     type:'delivery',    kw:'rappi' },
-  { key:'DiDi Food', type:'delivery',    kw:'didi food' },
-  { key:'DoorDash',  type:'delivery',    kw:'doordash' },
-  { key:'PedidosYa', type:'delivery',    kw:'pedidos ya' },
-  { key:'Just Eat',  type:'delivery',    kw:'just eat' },
-  { key:'Glovo',     type:'delivery',    kw:'glovo' },
-  { key:'SinDelantal', type:'delivery',  kw:'sin delantal' }
-];
-
-function normalizeUrl(u){
-  if(!u) return '';
-  let out = String(u).trim();
-  if(!/^https?:\/\//i.test(out)) out = 'https://' + out;
-  return out;
-}
-async function fetchWithTimeout(url, {timeout=8000, mode='cors'}={}){
-  const ctrl = new AbortController();
-  const t = setTimeout(()=>ctrl.abort(), timeout);
-  try{
-    const r = await fetch(url, {signal:ctrl.signal, mode});
-    clearTimeout(t);
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    return await r.text();
-  }catch{
-    clearTimeout(t);
-    return '';
-  }
-}
-async function fetchReadableProxy(url){
-  // usa https://r.jina.ai/ para obtener contenido legible sin CORS
-  const u = new URL(normalizeUrl(url));
-  const prox = `https://r.jina.ai/${u.protocol}//${u.host}${u.pathname}${u.search||''}`;
-  return await fetchWithTimeout(prox, {timeout:8000, mode:'cors'});
-}
-function detectPartnersFromText(text=''){
-  const t = text.toLowerCase();
-  const reservation = new Set();
-  const delivery = new Set();
-  for(const p of PARTNER_DOMAINS){
-    if(t.includes(p.host)) (p.type==='reservation'?reservation:delivery).add(p.key);
-  }
-  for(const p of PARTNER_KEYWORDS){
-    if(t.includes(p.kw)) (p.type==='reservation'?reservation:delivery).add(p.key);
-  }
-  return {
-    reservationProvider: Array.from(reservation).join(', '),
-    deliveryProviders:   Array.from(delivery).join(', ')
+  // Toggles
+  const toggles = { latlng:true, website:true, email:false, hours:false, price:false, maps:false, photo:false, types:true, short:false, summary:false, partners:true };
+  const idMap = {
+    "t-latlng":"latlng","t-website":"website","t-email":"email","x-hours":"hours","x-price":"price","x-mapsuri":"maps",
+    "x-photo":"photo","x-types":"types","x-short":"short","x-summary":"summary","x-partners":"partners"
   };
-}
-async function detectReservationDelivery(websiteUrl){
-  const url = normalizeUrl(websiteUrl);
-  if(!url) return {reservationProvider:'', deliveryProviders:''};
-
-  // 1) intento directo (si el sitio permite CORS)
-  let html = await fetchWithTimeout(url,{timeout:7000, mode:'cors'});
-  let text = html ? html : '';
-  // 2) fallback sin CORS (texto legible)
-  if(!text){
-    text = await fetchReadableProxy(url);
-  }
-  if(!text) return {reservationProvider:'', deliveryProviders:''};
-  return detectPartnersFromText(text);
-}
-
-/* =============== Places API (v1) helpers =============== */
-
-function fieldMaskCore(){
-  // Campos seguros (evitamos subtypes que da error)
-  return [
-    'places.id','places.displayName','places.primaryType','places.primaryTypeDisplayName',
-    'places.types','places.formattedAddress','places.addressComponents',
-    'places.location','places.googleMapsUri','places.rating','places.userRatingCount',
-    'places.priceLevel','places.websiteUri','places.nationalPhoneNumber','places.internationalPhoneNumber',
-    'nextPageToken'
-  ].join(',');
-}
-
-async function geocodeCenterByText(apiKey, locationText){
-  const url = 'https://places.googleapis.com/v1/places:searchText';
-  const body = { textQuery: locationText, maxResultCount: 1 };
-  const resp = await fetch(url,{
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'X-Goog-Api-Key': apiKey,
-      'X-Goog-FieldMask': 'places.location,places.displayName'
-    },
-    body: JSON.stringify(body)
+  Object.keys(idMap).forEach(id=>{
+    const el=$("#"+id); if(!el) return;
+    toggles[idMap[id]] = el.checked;
+    el.addEventListener("change", ()=> toggles[idMap[id]] = el.checked);
   });
-  if(!resp.ok) return null;
-  const data = await resp.json();
-  const place = data.places?.[0];
-  return place?.location || null;
-}
 
-async function textSearchAll(apiKey, keyword, center, radiusMeters){
-  const results = [];
-  let pageToken = null;
-  const mask = fieldMaskCore();
-
-  do{
-    const url = 'https://places.googleapis.com/v1/places:searchText';
-    const req = {
-      textQuery: keyword,
-      pageSize: 20,
-      locationBias: { circle: { center, radius: radiusMeters } }
-    };
-    if(pageToken) req.pageToken = pageToken;
-
-    const resp = await fetch(url,{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': mask
-      },
-      body: JSON.stringify(req)
-    });
-    if(!resp.ok){
-      const err = await resp.text();
-      throw new Error(`HTTP ${resp.status} en searchText: ${err}`);
-    }
-    const data = await resp.json();
-    if(Array.isArray(data.places)) results.push(...data.places);
-    pageToken = data.nextPageToken || null;
-    if(pageToken) await new Promise(r=>setTimeout(r, 1200));
-  }while(pageToken);
-
-  return results;
-}
-
-function acGet(component, type){
-  return (component || []).find(c => c.types?.includes(type))?.longText || '';
-}
-function parseAddressComponents(ac){
-  const state   = acGet(ac, 'administrative_area_level_1') || acGet(ac,'region');
-  const city    = acGet(ac, 'locality') || acGet(ac,'postal_town') || acGet(ac,'subadministrative_area_level_1');
-  const colony  = acGet(ac, 'sublocality') || acGet(ac,'neighborhood') || acGet(ac,'ward');
-  const postal  = acGet(ac, 'postal_code');
-  return {state, city, colony, postal};
-}
-
-/* =============== Email detection (simple) =============== */
-function extractEmailFromHTML(html){
-  if(!html) return '';
-  const mailto = html.match(/mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,})/);
-  if(mailto) return mailto[1];
-  const plain = html.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}/);
-  return plain ? plain[0] : '';
-}
-async function detectEmail(websiteUrl, maxSecs){
-  const url = normalizeUrl(websiteUrl);
-  if(!url) return '';
-  // si CORS falla, también probamos por el proxy de texto
-  let html = await fetchWithTimeout(url,{timeout:Math.max(3000, maxSecs*1000)});
-  if(!html) html = await fetchReadableProxy(url);
-  return extractEmailFromHTML(html);
-}
-
-/* =============== Render/CSV =============== */
-const rows = [];
-function renderRow(r){
-  const tr = document.createElement('tr');
-  const cells = [
-    r.kw || '',
-    r.state || '',
-    r.city || '',
-    r.colony || '',
-    r.name || '',
-    r.category || '',
-    r.website || '',
-    r.phone || '',
-    r.email || '',
-    r.address || '',
-    r.postal || '',
-    r.mapLink || '',
-    r.reservationProvider || '',
-    r.deliveryProviders || '',
-    r.lat ?? '',
-    r.lng ?? '',
-    r.rating ?? '',
-    r.reviews ?? ''
+  // --- Partners / Reserva & Delivery (con fallback sin CORS) ---
+  const PARTNER_DOMAINS = [
+    { key:'OpenTable', type:'reservation', host:'opentable.' },
+    { key:'UberEats',  type:'delivery',   host:'ubereats.' },
+    { key:'Rappi',     type:'delivery',   host:'rappi.' },
+    { key:'DiDi Food', type:'delivery',   host:'didi-food.' },
+    { key:'DoorDash',  type:'delivery',   host:'doordash.' },
+    { key:'PedidosYa', type:'delivery',   host:'pedidosya.' },
+    { key:'Just Eat',  type:'delivery',   host:'just-eat.' },
+    { key:'Glovo',     type:'delivery',   host:'glovo.' },
+    { key:'SinDelantal', type:'delivery', host:'sindelantal.' }
   ];
-  for(const c of cells){
-    const td = document.createElement('td');
-    if(/^https?:\/\//i.test(c)){
-      const a = document.createElement('a'); a.href=c; a.textContent='link'; a.target='_blank';
-      td.appendChild(a);
+  const PARTNER_KEYWORDS = [
+    { key:'OpenTable', type:'reservation', kw:'opentable' },
+    { key:'UberEats',  type:'delivery',    kw:'uber eats' },
+    { key:'Rappi',     type:'delivery',    kw:'rappi' },
+    { key:'DiDi Food', type:'delivery',    kw:'didi food' },
+    { key:'DoorDash',  type:'delivery',    kw:'doordash' },
+    { key:'PedidosYa', type:'delivery',    kw:'pedidos ya' },
+    { key:'Just Eat',  type:'delivery',    kw:'just eat' },
+    { key:'Glovo',     type:'delivery',    kw:'glovo' },
+    { key:'SinDelantal', type:'delivery',  kw:'sin delantal' }
+  ];
+  function normalizeUrl(u){ if(!u) return ''; let out=String(u).trim(); if(!/^https?:\/\//i.test(out)) out='https://'+out; return out; }
+  async function fetchWithTimeout(url, {timeout=7000, mode='cors'}={}){
+    const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(), timeout);
+    try{ const r=await fetch(url,{signal:ctrl.signal,mode}); clearTimeout(t); if(!r.ok) throw new Error(r.status); return await r.text(); }
+    catch{ clearTimeout(t); return ''; }
+  }
+  async function fetchReadableProxy(url){
+    const u=new URL(normalizeUrl(url));
+    const prox=`https://r.jina.ai/${u.protocol}//${u.host}${u.pathname}${u.search||''}`;
+    return await fetchWithTimeout(prox,{timeout:7000, mode:'cors'});
+  }
+  function detectPartnersFromText(text=''){
+    const t=text.toLowerCase();
+    const res=new Set(), del=new Set();
+    for(const p of PARTNER_DOMAINS){ if(t.includes(p.host)) (p.type==='reservation'?res:del).add(p.key); }
+    for(const p of PARTNER_KEYWORDS){ if(t.includes(p.kw)) (p.type==='reservation'?res:del).add(p.key); }
+    const list=[];
+    if(res.size) list.push(`Reserva: ${Array.from(res).join('|')}`);
+    if(del.size) list.push(`Delivery: ${Array.from(del).join('|')}`);
+    return list.join(' | ');
+  }
+  async function detectPartners(websiteUrl){
+    const url=normalizeUrl(websiteUrl); if(!url) return '';
+    let html=await fetchWithTimeout(url,{timeout:7000,mode:'cors'});
+    if(!html) html=await fetchReadableProxy(url);
+    if(!html) return '';
+    return detectPartnersFromText(html);
+  }
+
+  // --- Places API v1 ---
+  function buildFieldMask(){
+    const fm = [
+      "places.id","places.displayName","places.primaryType","places.types",
+      "places.formattedAddress","places.addressComponents",
+      "places.location","places.googleMapsUri",
+      "places.rating","places.userRatingCount",
+      "places.nationalPhoneNumber","places.internationalPhoneNumber",
+      "nextPageToken"
+    ];
+    if (toggles.website) fm.push("places.websiteUri");
+    if (toggles.short)   fm.push("places.shortFormattedAddress");
+    if (toggles.price)   fm.push("places.priceLevel");
+    if (toggles.hours)   fm.push("places.currentOpeningHours.openNow","places.currentOpeningHours.weekdayDescriptions");
+    if (toggles.types)   fm.push("places.primaryTypeDisplayName");
+    if (toggles.summary) fm.push("places.editorialSummary");
+    if (toggles.photo)   fm.push("places.photos.name");
+    return fm.join(",");
+  }
+
+  async function geocodeCenterByText(apiKey, text){
+    // Centro aproximado usando Places searchText (1 resultado)
+    const url='https://places.googleapis.com/v1/places:searchText';
+    const body={ textQuery:text, maxResultCount:1, languageCode:"es", regionCode:"MX" };
+    const r=await fetch(url,{ method:'POST', headers:{
+      'Content-Type':'application/json','X-Goog-Api-Key':apiKey,'X-Goog-FieldMask':'places.location,places.displayName'
+    }, body:JSON.stringify(body)});
+    if(!r.ok) return null;
+    const j=await r.json(); return j.places?.[0]?.location || null;
+  }
+
+  async function textSearchAll(apiKey, query, center, radiusM){
+    const results=[]; let token; const mask=buildFieldMask();
+    do{
+      const body={ textQuery:query, pageSize:20, languageCode:"es", regionCode:"MX", locationBias:{ circle:{ center, radius: radiusM } }, pageToken:token };
+      const r=await fetch('https://places.googleapis.com/v1/places:searchText',{ method:'POST', headers:{
+        'Content-Type':'application/json','X-Goog-Api-Key':apiKey,'X-Goog-FieldMask':mask
+      }, body:JSON.stringify(body)});
+      if(!r.ok){ const t=await r.text().catch(()=>r.statusText); throw new Error(`HTTP ${r.status}: ${t}`); }
+      const j=await r.json();
+      if(Array.isArray(j.places)) results.push(...j.places);
+      token=j.nextPageToken||null;
+      if(token) await new Promise(rs=>setTimeout(rs,1200));
+    }while(token);
+    return results;
+  }
+
+  // Parse addressComponents
+  const acGet=(ac,type)=> (ac||[]).find(c=>Array.isArray(c.types) && c.types.includes(type))?.longText || '';
+  function parseAddressComponents(ac){
+    const postal = acGet(ac,'postal_code');
+    const city   = acGet(ac,'locality') || acGet(ac,'postal_town') || acGet(ac,'administrative_area_level_2') || acGet(ac,'sublocality');
+    const state  = acGet(ac,'administrative_area_level_1');
+    const colony = acGet(ac,'sublocality') || acGet(ac,'neighborhood') || '';
+    return { postal, city, state, colony };
+  }
+
+  // Email simple
+  function extractEmail(html){
+    if(!html) return '';
+    const m1 = html.match(/mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,})/);
+    if(m1) return m1[1];
+    const m2 = html.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}/);
+    return m2?m2[0]:"";
+  }
+  async function detectEmail(websiteUrl, maxSecs){
+    const url = normalizeUrl(websiteUrl); if(!url) return '';
+    let html = await fetchWithTimeout(url,{timeout:Math.max(3000,maxSecs*1000)});
+    if(!html) html = await fetchReadableProxy(url);
+    return extractEmail(html);
+  }
+
+  // Render & CSV
+  function renderRows(rows){
+    const tb=$("#body"); tb.innerHTML="";
+    for(const r of rows){
+      const tr=document.createElement("tr");
+      const vals=[
+        r.acType, r.kw, r.state_in, r.city_in, r.colony_in,
+        r.name, r.category, r.website, r.phone, r.email, r.address,
+        r.cpCity, r.state_real, r.pin_code, r.reviews, r.rating, r.cid,
+        r.maplink, r.lat, r.lng, r.types, r.price, r.hours, r.summary, r.photo, r.partners
+      ];
+      vals.forEach((v,i)=>{
+        const td=document.createElement("td");
+        if(i===7 || i===16){ // Website/MapLink
+          if(v){ td.innerHTML=`<a href="${v}" target="_blank" rel="noopener">link</a>`; }
+        } else { td.textContent = v==null?"":String(v); }
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    }
+  }
+  function toCSV(rows){
+    const head=[
+      "AC or Prospect","KW","State","City","Colony","Company Name","Category","Website","Phone","email","address",
+      "Postal Code + City","state","pin code","# Reviews","Review","CID","MapLink","Lat","Lng","Tipo + Subtipos","Precio","Horario","Resumen","Foto","Partners"
+    ];
+    const esc=v=>v==null?"":(/[",\n]/.test(String(v))?`"${String(v).replace(/"/g,'""')}"`:v);
+    return [head.join(","), ...rows.map(r=>[
+      r.acType,r.kw,r.state_in,r.city_in,r.colony_in,r.name,r.category,r.website,r.phone,r.email,r.address,
+      r.cpCity,r.state_real,r.pin_code,r.reviews,r.rating,r.cid,r.maplink,r.lat,r.lng,r.types,r.price,r.hours,r.summary,r.photo,r.partners
+    ].map(esc).join(","))].join("\n");
+  }
+  function downloadCSV(rows,name="results.csv"){
+    const blob=new Blob([toCSV(rows)],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob); const a=document.createElement("a");
+    a.href=url; a.download=name; a.click(); URL.revokeObjectURL(url);
+  }
+
+  // START
+  $("#start").addEventListener("click", async ()=>{
+    const key=$("#apiKey").value.trim(); if(!key){ alert("Pega tu API Key"); return; }
+    const acType=$("#acType").value;
+
+    const kws=$("#kw").value.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
+    const ciudades=$("#ciudades").value.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
+    const estados=$("#estados").value.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
+    const colonias=$("#colonias").value.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
+    const zips=$("#zips").value.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
+    const rKm=Math.max(1,parseInt($("#radiusKm").value||"3",10)); const rM=rKm*1000;
+
+    if(!kws.length || (!ciudades.length && !estados.length && !colonias.length && !zips.length)){
+      alert("Escribe al menos 1 keyword y alguna ubicación (ciudad/estado/colonia/CP)."); return;
+    }
+
+    $("#body").innerHTML=""; $("#log").textContent="Iniciando…";
+    capi("hit","runs").then(x=>setRuns(x?.value)).catch(()=>{});
+
+    const rows=[]; const seen=new Set();
+
+    // Generar targets de búsqueda (entrada → columnas State/City/Colony)
+    const targets=[];
+    const C=ciudades.length?ciudades:[""]; const E=estados.length?estados:[""];
+    if(colonias.length){
+      for(const city of C) for(const state of E) for(const col of colonias){
+        const label=[col,city,state,"MX"].filter(Boolean).join(", ");
+        targets.push({state_in:state, city_in:city, colony_in:col, label});
+      }
     }else{
-      td.textContent = (c===undefined||c===null) ? '' : c;
-    }
-    tr.appendChild(td);
-  }
-  tbody.appendChild(tr);
-}
-
-function toCSV(arr){
-  const cols = ["KW","State","City","Colony","Company Name","Category","Website","Phone","email","address","Postal Code","MapLink","Reservation","Delivery","Lat","Lng","Rating","#Reviews"];
-  const esc = v => {
-    if(v===undefined||v===null) return '';
-    const s = String(v).replace(/"/g,'""');
-    return /[",\n]/.test(s) ? `"${s}"` : s;
-  };
-  const lines = [cols.join(',')];
-  for(const r of arr){
-    lines.push([
-      r.kw, r.state, r.city, r.colony, r.name, r.category, r.website, r.phone, r.email, r.address, r.postal, r.mapLink, r.reservationProvider, r.deliveryProviders, r.lat, r.lng, r.rating, r.reviews
-    ].map(esc).join(','));
-  }
-  return lines.join('\n');
-}
-function downloadCSV(){
-  const csv = toCSV(rows);
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href=url; a.download='places_export.csv'; document.body.appendChild(a); a.click();
-  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
-}
-
-/* =============== START =============== */
-$('#btnDownload').addEventListener('click', downloadCSV);
-
-$('#btnStart').addEventListener('click', async ()=>{
-  const apiKey = $('#apiKey').value.trim();
-  if(!apiKey){ alert('Pega tu API Key.'); return; }
-
-  const kwRaw = $('#kw').value.trim();
-  const keywords = kwRaw.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
-  const locs = $('#loc').value.trim().split('\n').map(s=>s.trim()).filter(Boolean);
-  const radiusKm = Math.max(1, Number($('#radiusKm').value)||3);
-  const radiusMeters = radiusKm * 1000;
-
-  const tgLatLng = $('#tgLatLng').checked;
-  const tgWebsite= $('#tgWebsite').checked;
-  const tgEmail  = $('#tgEmail').checked;
-  const emailSecs= Math.max(3, Number($('#emailSecs').value)||10);
-  const tgResDel = $('#tgResDel').checked;
-
-  if(keywords.length===0 || locs.length===0){
-    alert('Escribe al menos 1 keyword y 1 ubicación.');
-    return;
-  }
-
-  rows.length = 0; tbody.innerHTML=''; setFound(0);
-  logBox.textContent = 'Iniciando…';
-
-  const seen = new Set();
-
-  for(const locText of locs){
-    log(`Geolocalizando centro: ${locText} …`);
-    const center = await geocodeCenterByText(apiKey, locText);
-    if(!center){ log(`No se pudo geocodificar: ${locText}`); continue; }
-
-    for(const kw of keywords){
-      log(`Buscando "${kw}" @ "${locText}" (radio ${radiusKm} km)…`);
-      let places=[];
-      try{
-        places = await textSearchAll(apiKey, kw, center, radiusMeters);
-      }catch(e){
-        log(`[Error] "${kw}" @ "${locText}": ${e.message}`);
-        continue;
+      for(const city of C) for(const state of E){
+        const label=[city,state,"MX"].filter(Boolean).join(", ");
+        targets.push({state_in:state, city_in:city, colony_in:"", label});
       }
-      log(`→ ${places.length} resultados.`);
+    }
+    for(const z of zips){ if(z){ targets.push({state_in:"", city_in:"", colony_in:"", label:`${z}, MX`}); } }
 
-      for(const p of places){
-        if(!p.id || seen.has(p.id)) continue;
-        seen.add(p.id);
+    for(const t of targets){
+      const center = await geocodeCenterByText(key, t.label);
+      if(!center){ log(`No se pudo geolocalizar: ${t.label}`,"warn"); continue; }
 
-        const ac = parseAddressComponents(p.addressComponents || []);
-        const row = {
-          kw: kw,
-          state: ac.state || '',
-          city: ac.city || '',
-          colony: ac.colony || '',
-          name: p.displayName?.text || '',
-          category: p.primaryTypeDisplayName?.text || p.primaryType || '',
-          website: p.websiteUri || '',
-          phone: p.nationalPhoneNumber || p.internationalPhoneNumber || '',
-          email: '',
-          address: p.formattedAddress || '',
-          postal: ac.postal || '',
-          mapLink: p.googleMapsUri || '',
-          reservationProvider: '',
-          deliveryProviders: '',
-          lat: p.location?.latitude,
-          lng: p.location?.longitude,
-          rating: p.rating ?? '',
-          reviews: p.userRatingCount ?? ''
-        };
+      for(const kw of kws){
+        log(`"${kw}" @ "${t.label}" (radio ${rKm} km)…`);
+        let places=[];
+        try{ places=await textSearchAll(key, kw, center, rM); }
+        catch(e){ log(`Error: ${e.message}`,"err"); continue; }
+        log(`→ ${places.length} resultados.`);
 
-        if(tgWebsite && row.website){
-          if(tgEmail){
-            row.email = await detectEmail(row.website, emailSecs);
+        for(const p of places){
+          if(!p.id || seen.has(p.id)) continue; seen.add(p.id);
+          const ac = parseAddressComponents(p.addressComponents||[]);
+          const website = toggles.website ? (p.websiteUri||"") : "";
+
+          // Email + Partners (solo si hay website y están activos)
+          let email=""; let partners="";
+          if(website){
+            if(toggles.email){ email = await detectEmail(website, parseInt($("#maxEmailSec").value||"10",10)); }
+            if(toggles.partners){ partners = await detectPartners(website); }
           }
-          if(tgResDel){
-            try{
-              const partners = await detectReservationDelivery(row.website);
-              row.reservationProvider = partners.reservationProvider || '';
-              row.deliveryProviders   = partners.deliveryProviders   || '';
-            }catch{/* noop */}
+
+          // Tipos / Subtipos
+          let tipos=""; if(toggles.types){
+            const primary = p.primaryTypeDisplayName?.text || p.primaryType || "";
+            const subs = Array.isArray(p.types)?p.types.filter(x=>x!==p.primaryType).join("|"):"";
+            tipos = primary + (subs?` | ${subs}`:"");
           }
+
+          // Horario
+          let hours=""; if(toggles.hours){
+            const h=p.currentOpeningHours;
+            hours = h?.weekdayDescriptions?.join(" | ") || (h?.openNow!=null ? (h.openNow?"abierto":"cerrado") : "");
+          }
+
+          // Resumen
+          let summary=""; if(toggles.summary){ summary = p.editorialSummary?.text || ""; }
+
+          // Foto
+          let photo=""; if(toggles.photo){ photo = (p.photos && p.photos[0]?.name) ? p.photos[0].name : ""; }
+
+          // Precio
+          let price=""; if(toggles.price){ price = (p.priceLevel!=null)?String(p.priceLevel):""; }
+
+          const row={
+            acType: acType||"",
+            kw,
+            state_in: t.state_in||"",
+            city_in: t.city_in||"",
+            colony_in: t.colony_in||"",
+            name: p.displayName?.text||"",
+            category: p.primaryType||"",
+            website,
+            phone: p.nationalPhoneNumber || p.internationalPhoneNumber || "",
+            email,
+            address: p.formattedAddress||"",
+            cpCity: (ac.postal && ac.city)?`${ac.postal} ${ac.city}`:(ac.postal||ac.city||""),
+            state_real: ac.state||"",
+            pin_code: ac.postal||"",
+            reviews: p.userRatingCount ?? "",
+            rating: p.rating ?? "",
+            cid: p.id || "",
+            maplink: toggles.maps ? (p.googleMapsUri||"") : (p.googleMapsUri||""),
+            lat: toggles.latlng ? (p.location?.latitude??"") : "",
+            lng: toggles.latlng ? (p.location?.longitude??"") : "",
+            types: tipos,
+            price,
+            hours,
+            summary,
+            photo,
+            partners
+          };
+          rows.push(row);
         }
-
-        rows.push(row);
-        renderRow(row);
-        setFound(rows.length);
       }
     }
-  }
 
-  log(`Proceso finalizado. Lugares únicos: ${rows.length}.`);
-});
+    renderRows(rows);
+    log(`Proceso finalizado. Lugares únicos: ${rows.length}.`);
+  });
+
+  $("#download").addEventListener("click", ()=>{
+    const tb=$("#body"); if(!tb.firstChild){ alert("No hay datos."); return; }
+    // reconstruimos desde la tabla (para respetar lo que ve el usuario)
+    const rows=[]; [...tb.querySelectorAll("tr")].forEach(tr=>{
+      const tds=[...tr.children].map(td=>td.querySelector("a")?td.querySelector("a").href:td.textContent);
+      const obj={
+        acType:tds[0], kw:tds[1], state_in:tds[2], city_in:tds[3], colony_in:tds[4],
+        name:tds[5], category:tds[6], website:tds[7], phone:tds[8], email:tds[9], address:tds[10],
+        cpCity:tds[11], state_real:tds[12], pin_code:tds[13], reviews:tds[14], rating:tds[15], cid:tds[16],
+        maplink:tds[17], lat:tds[18], lng:tds[19], types:tds[20], price:tds[21], hours:tds[22], summary:tds[23], photo:tds[24], partners:tds[25]
+      };
+      rows.push(obj);
+    });
+    downloadCSV(rows);
+  });
 </script>
 </body>
 </html>
