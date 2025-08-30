@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Scrapping Tool — Google Maps Places</title>
 
+  <!-- Estilos del proyecto (ajusta las rutas si cambian) -->
   <link rel="stylesheet" href="/assets/css/scrapping-tool.css">
   <link rel="stylesheet" media="print" href="/assets/css/print.css">
 
@@ -123,10 +124,38 @@
         </div>
       </div>
 
+      <!-- Métricas y Memoria -->
       <div class="row">
         <div class="metric">👁️ Visitas: <span id="mVisits">—</span></div>
         <div class="metric">⚙️ Extracciones: <span id="mRuns">—</span></div>
         <div class="metric">📍 País: <span id="mCountry">—</span></div>
+      </div>
+
+      <div id="memoryBar" class="row" style="gap:.75rem;align-items:center;margin-top:.5rem;">
+        <label style="display:flex;align-items:center;gap:.35rem;">
+          <input id="omitSeen" type="checkbox" checked> Omitir vistos
+        </label>
+
+        <label style="display:flex;align-items:center;gap:.35rem;">
+          Ámbito:
+          <select id="scopeMode">
+            <option value="project" selected>Por proyecto</option>
+            <option value="global">Global</option>
+          </select>
+        </label>
+
+        <label style="display:flex;align-items:center;gap:.35rem;">
+          Proyecto:
+          <input id="projectName" placeholder="auto" style="width:260px">
+          <button id="autoProject" type="button" class="btn">Auto</button>
+        </label>
+
+        <button id="resetMemory" type="button" class="btn">Reset memoria (scope)</button>
+        <button id="exportMemory" type="button" class="btn">Exportar</button>
+        <button id="importMemory" type="button" class="btn">Importar</button>
+        <input id="importFile" type="file" accept=".txt" style="display:none">
+
+        <span id="memCount" class="metric">0 guardados</span>
       </div>
     </div>
 
@@ -172,6 +201,9 @@
   </div>
 
   <script>
+    /* ===== Config de métricas ===== */
+    const ENABLE_METRICS = false; // ← pon true si quieres visitas/ejecuciones (CountAPI)
+
     /* -------- util -------- */
     const $ = (s)=>document.querySelector(s);
     const logEl=$("#log"), tbody=$("#tbody"), resCountEl=$("#resCount");
@@ -198,8 +230,19 @@
       const a=document.createElement("a"); a.href=url; a.download=name; a.click(); URL.revokeObjectURL(url);
     }
 
-    async function safeJson(u){ try{ const r=await fetch(u); return await r.json(); }catch{return null;} }
+    async function safeJson(u){
+      try{ const r=await fetch(u); return await r.json(); }
+      catch{ return null; }
+    }
+
     async function updateMetrics(){
+      if(!ENABLE_METRICS){
+        $("#mVisits").textContent="—"; $("#mRuns").textContent="—";
+        try{
+          const ip=await safeJson("https://ipapi.co/json/"); $("#mCountry").textContent = ip?.country_name?`${ip.country_name} (${ip.country})`:"—";
+        }catch{}
+        return;
+      }
       const ip=await safeJson("https://ipapi.co/json/"); $("#mCountry").textContent = ip?.country_name?`${ip.country_name} (${ip.country})`:"—";
       const ns="maps-extractor-ot.vercel.app";
       const v1=await safeJson(`https://api.countapi.xyz/hit/${ns}/pageviews`);
@@ -218,7 +261,8 @@
         if(prev){ if(!prev.src.includes(key)) prev.remove(); else return resolve(); }
         const s=document.createElement("script");
         s.id="gmaps-script"; s.async=true; s.defer=true;
-        s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&v=weekly`;
+        // añadimos loading=async para evitar la advertencia
+        s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&v=weekly&loading=async`;
         s.onload=()=>{mapsReady=true; resolve();};
         s.onerror=()=>reject(new Error("No se pudo cargar Google Maps JS"));
         document.head.appendChild(s);
@@ -334,11 +378,148 @@
     }
     function clearRows(){ rowsData.length=0; tbody.innerHTML=""; $("#resCount").textContent="0"; }
 
-    /* -------- handlers -------- */
+    /* ======= MEMORIA (global/proyecto) + export/import ======= */
+    const SEEN_PREFIX     = 'mapsOT_seen_v2:';
+    const SCOPE_MODE_KEY  = 'mapsOT_scope_mode';
+    const PROJECT_NAME_KEY= 'mapsOT_project_name';
+    const OMITSWITCH_KEY  = 'mapsOT_omit_seen';
+
+    function slug(s) {
+      return String(s || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/[^a-zA-Z0-9]+/g,'-')
+        .replace(/^-+|-+$/g,'')
+        .toLowerCase();
+    }
+    function autoScopeFromForm() {
+      const kw   = ($("#keywords")?.value || '').split('\n').map(s=>s.trim()).filter(Boolean).slice(0,2).join('+');
+      const city = ($("#city")?.value || '').trim();
+      const st   = ($("#state")?.value || '').trim();
+      const col  = ($("#colony")?.value || '').trim();
+      const zips = ($("#postalCodes")?.value || '').replace(/\s+/g,'').trim();
+      const km   = ($("#radiusKm")?.value || '').trim();
+      const raw = [kw || 'kw', city || 'city', st || 'state', col || 'col', zips || 'cp', km || 'km'].join('|');
+      return slug(raw);
+    }
+    function currentScopeName() {
+      const mode = $('#scopeMode')?.value || 'project';
+      if (mode === 'global') return 'global';
+      const manual = $('#projectName')?.value?.trim();
+      return slug(manual || autoScopeFromForm());
+    }
+    function storageKeyForScope() { return SEEN_PREFIX + currentScopeName(); }
+
+    function loadSeen() {
+      try {
+        const raw = localStorage.getItem(storageKeyForScope());
+        return raw ? JSON.parse(raw) : {};
+      } catch { return {}; }
+    }
+    function saveSeen(map) { localStorage.setItem(storageKeyForScope(), JSON.stringify(map)); }
+
+    function placeKey(p) {
+      return (
+        p.id ||
+        p.googleMapsUri ||
+        p.name ||
+        ((p.displayName?.text || '') + '|' + (p.formattedAddress || '')) ||
+        (p.location
+          ? (Number(p.location.latitude).toFixed(5) + ',' + Number(p.location.longitude).toFixed(5))
+          : '')
+      );
+    }
+    let seen = loadSeen();
+
+    function updateMemCount() {
+      const el = $('#memCount');
+      if (el) el.textContent = `${Object.keys(seen).length} guardados (${currentScopeName()})`;
+    }
+    function filterNew(arr) {
+      return arr.filter(p => {
+        const k = placeKey(p);
+        if (!k) return true;
+        return !seen[k];
+      });
+    }
+    function markSeen(arr) {
+      let changed = false;
+      for (const p of arr) {
+        const k = placeKey(p);
+        if (k && !seen[k]) { seen[k] = Date.now(); changed = true; }
+      }
+      if (changed) { saveSeen(seen); updateMemCount(); }
+    }
+    function restoreMemoryControls() {
+      const omit = localStorage.getItem(OMITSWITCH_KEY);
+      if ($('#omitSeen')) $('#omitSeen').checked = omit !== '0';
+      const mode = localStorage.getItem(SCOPE_MODE_KEY) || 'project';
+      if ($('#scopeMode')) $('#scopeMode').value = mode;
+      const pname = localStorage.getItem(PROJECT_NAME_KEY) || '';
+      if ($('#projectName')) $('#projectName').value = pname;
+    }
+    restoreMemoryControls();
+
+    $('#omitSeen')?.addEventListener('change', e => {
+      localStorage.setItem(OMITSWITCH_KEY, e.target.checked ? '1' : '0');
+    });
+    $('#scopeMode')?.addEventListener('change', () => {
+      localStorage.setItem(SCOPE_MODE_KEY, $('#scopeMode').value);
+      seen = loadSeen(); updateMemCount();
+    });
+    $('#projectName')?.addEventListener('input', () => {
+      localStorage.setItem(PROJECT_NAME_KEY, $('#projectName').value);
+    });
+    $('#autoProject')?.addEventListener('click', () => {
+      const auto = autoScopeFromForm();
+      if ($('#projectName')) {
+        $('#projectName').value = auto;
+        localStorage.setItem(PROJECT_NAME_KEY, auto);
+      }
+      seen = loadSeen(); updateMemCount();
+    });
+    $('#resetMemory')?.addEventListener('click', () => {
+      if (confirm(`Borrar memoria del scope "${currentScopeName()}"?`)) {
+        localStorage.removeItem(storageKeyForScope());
+        seen = {}; updateMemCount();
+      }
+    });
+    $('#exportMemory')?.addEventListener('click', () => {
+      const keys = Object.keys(seen).join('\n');
+      const blob = new Blob([keys], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `memoria-${currentScopeName()}-${Object.keys(seen).length}.txt`;
+      a.click();
+    });
+    $('#importMemory')?.addEventListener('click', () => $('#importFile')?.click());
+    $('#importFile')?.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const txt = await file.text();
+      const lines = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      let changed = false;
+      for (const k of lines) { if (!seen[k]) { seen[k] = Date.now(); changed = true; } }
+      if (changed) { saveSeen(seen); updateMemCount(); }
+      e.target.value = '';
+    });
+    updateMemCount();
+
+    // Atajos para usar en el scraping
+    function memoryFilterBatch(placesArray) {
+      const omit = $('#omitSeen')?.checked !== false;
+      let lote = placesArray || [];
+      if (omit) lote = filterNew(lote);
+      return lote;
+    }
+    function memoryMarkBatch(placesArray) {
+      markSeen(placesArray || []);
+    }
+
+    /* ====== Handlers principales ====== */
     $("#btnStart").addEventListener("click", start);
     $("#btnDownload").addEventListener("click", ()=>downloadCSV(`maps-extractor-${new Date().toISOString().slice(0,10)}.csv`, toCSV(rowsData)));
 
-    // convierte el viewport de Maps JS al formato de Places v1
+    // convierte viewport (Maps JS) al formato rectangle (Places v1)
     function viewportToRectangleBias(viewport){
       try{
         if(viewport?.getSouthWest && viewport?.getNorthEast){
@@ -373,7 +554,6 @@
         const state=$("#state").value.trim();
         const city=$("#city").value.trim();
         const colony=$("#colony").value.trim();
-        const colonia = colony; // alias defensivo
         const cps=$("#postalCodes").value.trim();
         const radiusKm=Math.max(1, parseFloat($("#radiusKm").value)||3);
 
@@ -414,8 +594,12 @@
           const textQuery = colony ? `${kw} @ ${colony}, ${city} ${state}` : `${kw} @ ${city} ${state}`.trim();
           log(`Buscando "${kw}" @ "${[colony,city,state].filter(Boolean).join(", ")}" (radio ${radiusKm} km)…`);
           try{
-            const places=await textSearchAll({apiKey,textQuery,bias,pageLimit:50,pageSize:20});
-            for(const p of places){
+            const places = await textSearchAll({apiKey,textQuery,bias,pageLimit:50,pageSize:20});
+
+            // ===== memoria: filtrar y marcar =====
+            const lote = memoryFilterBatch(places);
+
+            for(const p of lote){
               const comp=p.addressComponents||[];
               const row={
                 "KW": kw,
@@ -441,6 +625,10 @@
 
               pushRow(row);
             }
+
+            // marca como vistos lo que sí se agregó
+            memoryMarkBatch(lote);
+
           }catch(e){
             log(`Error "${kw}" @ "${[colony,city,state].filter(Boolean).join(", ")}": ${e.message}`,"err");
           }
