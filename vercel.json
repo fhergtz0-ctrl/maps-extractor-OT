@@ -5,7 +5,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://maps.googleapis.com https://maps.gstatic.com 'unsafe-inline'; connect-src 'self' https://places.googleapis.com https://maps.googleapis.com https://api.countapi.xyz https://ipapi.co https://r.jina.ai; img-src 'self' data: https://maps.gstatic.com https://maps.googleapis.com https://lh3.googleusercontent.com https://*.ggpht.com https://r.jina.ai; style-src 'self' 'unsafe-inline'; frame-src https://www.google.com;"
+          "value": "default-src 'self'; script-src 'self' https://maps.googleapis.com https://maps.gstatic.com 'unsafe-inline'; connect-src 'self' https://places.googleapis.com https://maps.googleapis.com https://api.countapi.xyz https://ipapi.co https://r.jina.ai; img-src 'self' data: blob: https://maps.gstatic.com https://maps.googleapis.com https://lh3.googleusercontent.com https://*.ggpht.com; style-src 'self' 'unsafe-inline'; frame-src https://www.google.com https://www.google.com.mx; base-uri 'self'; form-action 'self'; object-src 'none'"
         },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=()" },
