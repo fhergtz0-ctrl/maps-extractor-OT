@@ -1,240 +1,186 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Scrapping Tool — Google Maps Places</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Ctext y='34' x='4' font-size='32'%3E🗺️%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Ctext x='6' y='34' font-size='28'%3E🗺️%3C/text%3E%3C/svg%3E">
 <style>
   :root{
-    --bg:#0f1115; --panel:#161a22; --panel-2:#1b2130; --muted:#a7b1c2; --text:#e7ecf3;
-    --accent:#22c55e; --soft:#2a3346; --chip:#222838; --chip-on:#26334a;
-    --good:#16a34a; --warn:#ea580c; --bad:#ef4444; --blue:#60a5fa;
+    --bg:#0f1115;--panel:#161a22;--panel2:#1b2130;--soft:#273048;--muted:#9aa7bd;--text:#e9eef6;
+    --accent:#22c55e;--good:#16a34a;--warn:#ea580c;--bad:#ef4444;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
-  body{
-    margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial;
-  }
-  .wrap{max-width:1260px;margin:24px auto;padding:0 16px}
-  .hrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .title{font-weight:700;font-size:20px;margin:0 0 8px}
-  .sub{color:var(--muted);margin-bottom:14px}
-
-  .toolbar{background:var(--panel);border:1px solid var(--soft);border-radius:12px;padding:16px}
-  .group{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Inter,Arial}
+  .wrap{max-width:1260px;margin:22px auto;padding:0 16px}
+  h1{margin:0 0 6px;font-size:20px}
+  .sub{color:var(--muted);margin-bottom:12px}
+  /* toolbar */
+  .toolbar{background:var(--panel);border:1px solid var(--soft);border-radius:12px;padding:14px}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
   .col{display:flex;flex-direction:column;gap:6px}
   label{font-size:12px;color:var(--muted)}
-  input[type="text"], textarea, select, input[type="number"]{
-    background:var(--panel-2);color:var(--text);border:1px solid var(--soft);border-radius:10px;
-    height:40px;padding:0 12px;outline:0;min-width:160px;
-  }
-  textarea{height:40px;padding:8px 10px;min-width:220px;resize:vertical}
-  .small{width:84px}
-  .tiny{width:64px}
-  .full{min-width:260px}
-  .chips{display:flex;gap:10px;flex-wrap:wrap}
-  .chip{
-    background:var(--chip);border:1px solid var(--soft);border-radius:999px;padding:8px 12px;
-    display:inline-flex;gap:8px;align-items:center;color:var(--text)
-  }
+  input[type=text],textarea,select,input[type=number]{background:var(--panel2);border:1px solid var(--soft);color:var(--text);border-radius:10px;height:40px;padding:0 12px;min-width:160px;outline:0}
+  textarea{height:40px;padding:8px 10px;resize:vertical;min-width:220px}
+  .tiny{width:76px}.small{width:96px}.wide{min-width:260px}
+  .chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+  .chip{display:inline-flex;gap:8px;align-items:center;background:#1f2433;border:1px solid var(--soft);border-radius:999px;padding:8px 12px}
   .chip input{transform:translateY(1px)}
-  .btn{
-    height:40px;border-radius:10px;border:1px solid var(--soft);background:var(--panel-2);
-    color:var(--text);padding:0 14px;cursor:pointer;
-  }
-  .btn.primary{background:var(--good);border-color:#0e7a34;color:white}
-  .btn.gray{background:var(--panel-2)}
-  .badge{background:#0b1220;border:1px solid var(--soft);border-radius:999px;padding:6px 10px;color:var(--muted)}
+  .btn{height:40px;border-radius:10px;border:1px solid var(--soft);background:#1f2433;color:var(--text);padding:0 14px;cursor:pointer}
+  .btn.primary{background:var(--good);border-color:#0e7a34;color:#fff}
+  .badge{background:#0d1322;border:1px solid var(--soft);border-radius:999px;padding:6px 10px;color:var(--muted)}
+  .bad{color:var(--bad)} .ok{color:var(--good)} .warn{color:var(--warn)}
   .counters{display:flex;gap:12px;align-items:center;margin-top:10px}
-
-  .log{margin-top:14px;background:var(--panel);border:1px solid var(--soft);border-radius:12px;padding:12px;height:130px;overflow:auto;white-space:pre-wrap}
-  .log small{color:var(--muted)}
-  .ok{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
-
-  .table-wrap{margin-top:14px;background:var(--panel);border:1px solid var(--soft);border-radius:12px;overflow:auto}
+  /* log */
+  .log{margin-top:12px;background:var(--panel);border:1px solid var(--soft);border-radius:12px;padding:10px;height:130px;overflow:auto;white-space:pre-wrap}
+  /* table */
+  .tbl-wrap{margin-top:12px;background:var(--panel);border:1px solid var(--soft);border-radius:12px;overflow:auto}
   table{width:max(1200px,100%);border-collapse:separate;border-spacing:0}
-  thead th{
-    position:sticky;top:0;background:#0f1420;border-bottom:1px solid var(--soft);
-    text-align:left;padding:10px;font-weight:600
-  }
+  thead th{position:sticky;top:0;background:#0f1420;border-bottom:1px solid var(--soft);text-align:left;padding:10px;font-weight:600}
   tbody td{border-bottom:1px solid var(--soft);padding:8px 10px;font-size:13px;vertical-align:top}
-  thead th, tbody td{min-width:120px}
-  thead th:first-child, tbody td:first-child{position:sticky;left:0;background:linear-gradient(90deg,#0f1420 90%, transparent)}
-  .filters input{width:100%;height:34px;background:var(--panel-2);border:1px solid var(--soft);border-radius:8px;color:var(--text);padding:0 8px}
-
-  .footer-note{color:var(--muted);font-size:12px;margin-top:10px}
-  .hint{color:var(--muted);font-size:12px}
+  thead th,tbody td{min-width:120px}
+  .filters input{width:100%;height:34px;background:var(--panel2);border:1px solid var(--soft);border-radius:8px;color:var(--text);padding:0 8px}
+  .foot{color:var(--muted);font-size:12px;margin-top:10px}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="hrow">
-      <h1 class="title">Scrapping Tool</h1>
-      <div class="sub">— Google Maps Places (barra única; combina Estado/Ciudad/Colonia/CP; marca los “Campos extra” que quieras).</div>
-    </div>
+<div class="wrap">
+  <h1>Scrapping Tool</h1>
+  <div class="sub">— Google Maps Places (barra única; combina Estado/Ciudad/Colonia/CP; marca los “Campos extra” que desees).</div>
 
-    <!-- Toolbar ------------------------------------------------------------->
-    <div class="toolbar" id="toolbar">
-      <div class="group">
-        <div class="col">
-          <label>API Key</label>
-          <input id="apiKey" class="full" type="text" placeholder="Pegar aquí la Key" />
-        </div>
-        <div class="col">
-          <label>Radio por consulta (km)</label>
-          <input id="radioKm" class="tiny" type="number" min="1" value="3" />
-        </div>
-        <div class="col">
-          <label>Seg máx. email</label>
-          <input id="maxEmailSec" class="tiny" type="number" min="5" value="10" />
-        </div>
-
-        <div class="col">
-          <label>Keywords (una por línea)</label>
-          <textarea id="kw" placeholder="restaurantes&#10;cafeterías" rows="1"></textarea>
-        </div>
-        <div class="col">
-          <label>Ciudad(es)</label>
-          <textarea id="ciudades" placeholder="hermosillo" rows="1"></textarea>
-        </div>
-        <div class="col">
-          <label>Estado(s)</label>
-          <textarea id="estados" placeholder="sonora" rows="1"></textarea>
-        </div>
-        <div class="col">
-          <label>Colonia(s) (opcional)</label>
-          <textarea id="colonias" placeholder="centro" rows="1"></textarea>
-        </div>
-        <div class="col">
-          <label>Códigos postales (opcional)</label>
-          <textarea id="cps" placeholder="83000&#10;83290" rows="1"></textarea>
-        </div>
+  <div class="toolbar">
+    <div class="row">
+      <div class="col">
+        <label>API Key</label>
+        <input id="apiKey" class="wide" type="text" placeholder="Pegar aquí la Key">
+      </div>
+      <div class="col">
+        <label>Radio por consulta (km)</label>
+        <input id="radioKm" class="tiny" type="number" value="3" min="1">
+      </div>
+      <div class="col">
+        <label>Seg máx. email</label>
+        <input id="maxEmailSec" class="tiny" type="number" value="10" min="5">
       </div>
 
-      <div class="chips" style="margin-top:12px">
-        <label>Campos extra:</label>
-        <label class="chip"><input id="fHorario" type="checkbox" checked> Horario</label>
-        <label class="chip"><input id="fPrecio" type="checkbox" checked> Precio</label>
-        <label class="chip"><input id="fMapsUri" type="checkbox"> Maps URI</label>
-        <label class="chip"><input id="fFoto" type="checkbox"> Foto</label>
-        <label class="chip"><input id="fTipos" type="checkbox" checked> Tipo + Subtipos</label>
-        <label class="chip"><input id="fShort" type="checkbox"> Short Addr</label>
-        <label class="chip"><input id="fResumen" type="checkbox"> Resumen</label>
-        <label class="chip"><input id="fPartners" type="checkbox" checked> Partners (Reserva/Delivery)</label>
-
-        <label class="chip"><input id="wantLL" type="checkbox" checked> Lat &amp; Long</label>
-        <label class="chip"><input id="wantWeb" type="checkbox" checked> Website</label>
-        <label class="chip"><input id="wantEmail" type="checkbox"> Email</label>
-
-        <button id="btnStart" class="btn primary">Iniciar</button>
-        <button id="btnCsv" class="btn gray">Descargar</button>
-        <span class="badge">Resultados: <b id="resCount">0</b></span>
+      <div class="col">
+        <label>Keywords (una por línea)</label>
+        <textarea id="kw" placeholder="restaurantes&#10;cafeterías"></textarea>
       </div>
-
-      <div class="counters">
-        <span class="badge">👁️ Visitas: <span id="vCount">—</span></span>
-        <span class="badge">⚙️ Extracciones: <span id="xCount">—</span></span>
-        <span class="badge">📍 País: <span id="country">—</span></span>
+      <div class="col">
+        <label>Ciudad(es)</label>
+        <textarea id="ciudades" placeholder="hermosillo"></textarea>
+      </div>
+      <div class="col">
+        <label>Estado(s)</label>
+        <textarea id="estados" placeholder="sonora"></textarea>
+      </div>
+      <div class="col">
+        <label>Colonia(s) (opcional)</label>
+        <textarea id="colonias" placeholder="centro"></textarea>
+      </div>
+      <div class="col">
+        <label>Códigos postales (opcional)</label>
+        <textarea id="cps" placeholder="83000&#10;83290"></textarea>
       </div>
     </div>
 
-    <!-- Log ----------------------------------------------------------------->
-    <div class="log" id="log"><small>Listo para iniciar…</small></div>
+    <div class="chips">
+      <span style="align-self:center;color:#9aa7bd">Campos extra:</span>
+      <label class="chip"><input id="fHorario" type="checkbox" checked> Horario</label>
+      <label class="chip"><input id="fPrecio"  type="checkbox" checked> Precio</label>
+      <label class="chip"><input id="fMapsUri" type="checkbox"> Maps URI</label>
+      <label class="chip"><input id="fFoto"    type="checkbox"> Foto</label>
+      <label class="chip"><input id="fTipos"   type="checkbox" checked> Tipo + Subtipos</label>
+      <label class="chip"><input id="fShort"   type="checkbox"> Short Addr</label>
+      <label class="chip"><input id="fResumen" type="checkbox"> Resumen</label>
+      <label class="chip"><input id="fPartners" type="checkbox" checked> Partners (Reserva/Delivery)</label>
 
-    <!-- Tabla --------------------------------------------------------------->
-    <div class="table-wrap">
-      <table id="tbl">
-        <thead>
-          <tr>
-            <th>KW</th>
-            <th>State</th>
-            <th>City</th>
-            <th>Colony</th>
-            <th>Postal Code</th>
-            <th>Company Name</th>
-            <th>Category</th>
-            <th>Website</th>
-            <th>Phone</th>
-            <th>email</th>
-            <th>address</th>
-            <th>Lat</th>
-            <th>Lng</th>
-            <th>Horario</th>
-            <th>Precio</th>
-            <th>Partners</th>
-            <th>Review</th>
-            <th># Reviews</th>
-            <th>MapLink</th>
-          </tr>
-          <tr class="filters">
-            <td><input data-col="KW" placeholder="filtrar…"></td>
-            <td><input data-col="State" placeholder="filtrar…"></td>
-            <td><input data-col="City" placeholder="filtrar…"></td>
-            <td><input data-col="Colony" placeholder="filtrar…"></td>
-            <td><input data-col="Postal Code" placeholder="filtrar…"></td>
-            <td><input data-col="Company Name" placeholder="filtrar…"></td>
-            <td><input data-col="Category" placeholder="filtrar…"></td>
-            <td><input data-col="Website" placeholder="filtrar…"></td>
-            <td><input data-col="Phone" placeholder="filtrar…"></td>
-            <td><input data-col="email" placeholder="filtrar…"></td>
-            <td><input data-col="address" placeholder="filtrar…"></td>
-            <td><input data-col="Lat" placeholder="filtra…"></td>
-            <td><input data-col="Lng" placeholder="filtra…"></td>
-            <td><input data-col="Horario" placeholder="filtrar…"></td>
-            <td><input data-col="Precio" placeholder="filtrar…"></td>
-            <td><input data-col="Partners" placeholder="filtrar…"></td>
-            <td><input data-col="Review" placeholder="filtrar…"></td>
-            <td><input data-col="# Reviews" placeholder="filtrar…"></td>
-            <td><input data-col="MapLink" placeholder="filtrar…"></td>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
+      <label class="chip"><input id="wantLL"   type="checkbox" checked> Lat &amp; Long</label>
+      <label class="chip"><input id="wantWeb"  type="checkbox" checked> Website</label>
+      <label class="chip"><input id="wantMail" type="checkbox"> Email</label>
+
+      <button id="btnStart" class="btn primary">Iniciar</button>
+      <button id="btnCsv" class="btn">Descargar</button>
+      <span class="badge">Resultados: <b id="resCount">0</b></span>
     </div>
 
-    <div class="footer-note">
-      Origen: esta página — sin backend — llama a Google Places v1 y Geocoding.
-      <span class="hint">Si el geocodificado falla para “colonia”, intentamos ciudad+estado y después solo ciudad/estado o CP.</span>
+    <div class="counters">
+      <span class="badge">👁️ Visitas: <span id="vCount">—</span></span>
+      <span class="badge">⚙️ Extracciones: <span id="xCount">—</span></span>
+      <span class="badge">📍 País: <span id="country">—</span></span>
     </div>
   </div>
 
+  <div id="log" class="log">Listo para iniciar…</div>
+
+  <div class="tbl-wrap">
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th>KW</th><th>State</th><th>City</th><th>Colony</th><th>Postal Code</th>
+          <th>Company Name</th><th>Category</th><th>Website</th><th>Phone</th><th>email</th>
+          <th>address</th><th>Lat</th><th>Lng</th><th>Horario</th><th>Precio</th><th>Partners</th>
+          <th>Review</th><th># Reviews</th><th>MapLink</th>
+        </tr>
+        <tr class="filters">
+          <td><input data-col="KW" placeholder="filtrar…"></td>
+          <td><input data-col="State" placeholder="filtrar…"></td>
+          <td><input data-col="City" placeholder="filtrar…"></td>
+          <td><input data-col="Colony" placeholder="filtrar…"></td>
+          <td><input data-col="Postal Code" placeholder="filtrar…"></td>
+          <td><input data-col="Company Name" placeholder="filtrar…"></td>
+          <td><input data-col="Category" placeholder="filtrar…"></td>
+          <td><input data-col="Website" placeholder="filtrar…"></td>
+          <td><input data-col="Phone" placeholder="filtrar…"></td>
+          <td><input data-col="email" placeholder="filtrar…"></td>
+          <td><input data-col="address" placeholder="filtrar…"></td>
+          <td><input data-col="Lat" placeholder="filtra…"></td>
+          <td><input data-col="Lng" placeholder="filtra…"></td>
+          <td><input data-col="Horario" placeholder="filtrar…"></td>
+          <td><input data-col="Precio" placeholder="filtrar…"></td>
+          <td><input data-col="Partners" placeholder="filtrar…"></td>
+          <td><input data-col="Review" placeholder="filtrar…"></td>
+          <td><input data-col="# Reviews" placeholder="filtrar…"></td>
+          <td><input data-col="MapLink" placeholder="filtrar…"></td>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="foot">
+    Origen: esta página — sin backend — usa Google Geocoding y Places v1. Si falla colonia, probamos ciudad+estado → ciudad → estado; si pusiste CP, lo intentamos primero con <code>components=postal_code:XXXX|country:MX</code>.
+  </div>
+</div>
+
 <script>
-/* ----------------------- util UI --------------------------------------- */
-const $ = s => document.querySelector(s);
-const $$ = s => Array.from(document.querySelectorAll(s));
-const log = msg => {
-  const el = $("#log");
-  el.textContent += (el.textContent ? "\\n" : "") + msg;
-  el.scrollTop = el.scrollHeight;
-};
-const clearLog = () => $("#log").textContent = "Iniciando…";
+/* ==================== util UI ==================== */
+const $ = s=>document.querySelector(s);
+const $$ = s=>Array.from(document.querySelectorAll(s));
+const appendLog = t=>{ const el=$("#log"); el.textContent += (el.textContent?"\\n":"")+t; el.scrollTop=el.scrollHeight; };
+const clearLog = ()=>$("#log").textContent="Iniciando…";
 
-/* ----------------------- métricas (CountAPI) --------------------------- */
-const COUNT_NS = location.host.replace(/[:.]/g,'-') || 'localdev';
-const countapiGet = async (key) => {
+/* ==================== CountAPI (tolerante) ==================== */
+const COUNT_NS = "maps-extractor-ot"; // namespace corto y estable
+async function capiGet(key){ try{ const r=await fetch(`https://api.countapi.xyz/get/${COUNT_NS}/${key}`); if(!r.ok) throw 0; return (await r.json()).value; }catch{ return "—"; } }
+async function capiHit(key){ try{ await fetch(`https://api.countapi.xyz/hit/${COUNT_NS}/${key}`); }catch{} }
+async function updateMetrics(){
+  $("#vCount").textContent = await capiGet("pageviews");
+  $("#xCount").textContent = await capiGet("runs");
   try{
-    const r = await fetch(`https://api.countapi.xyz/get/${COUNT_NS}/${key}`);
-    if(!r.ok) throw 0; return (await r.json()).value;
-  }catch{ return "—"; }
-};
-const countapiHit = async (key) => {
-  try{ await fetch(`https://api.countapi.xyz/hit/${COUNT_NS}/${key}`); }catch{}
-};
-async function updateMetricsUI(){
-  $("#vCount").textContent = await countapiGet('pageviews');
-  $("#xCount").textContent = await countapiGet('runs');
-  try{
-    const r = await fetch("https://ipapi.co/json/");
-    const j = await r.json();
-    $("#country").textContent = `${j.country_name || j.country} (${j.country || ""})`;
-  }catch{ $("#country").textContent = "—"; }
+    const r = await fetch("https://ipapi.co/json/"); const j = await r.json();
+    $("#country").textContent = `${j.country_name||j.country||"—"} (${j.country||"?"})`;
+  }catch{ $("#country").textContent="—"; }
 }
-updateMetricsUI(); countapiHit('pageviews');
+updateMetrics(); capiHit("pageviews");
 
-/* ----------------------- Google helpers ------------------------------- */
-function fieldMask(selected){
-  // pide solo campos válidos en Places v1
+/* ==================== helpers ==================== */
+const arr = t => t.split(/\\r?\\n|,|;/).map(s=>s.trim()).filter(Boolean);
+const cleanCPs = t => arr(t).map(s=>s.replace(/\\D/g,"")).filter(s=>s.length>=4);
+
+function fieldMask(flags){
   const base = [
     "places.id","places.displayName","places.primaryType","places.types",
     "places.formattedAddress","places.location","places.plusCode",
@@ -242,144 +188,158 @@ function fieldMask(selected){
     "places.rating","places.userRatingCount","places.priceLevel",
     "places.googleMapsUri"
   ];
-  if(selected.short) base.push("places.shortFormattedAddress");
-  if(selected.horario) base.push("places.currentOpeningHours.openNow","places.currentOpeningHours.weekdayDescriptions");
-  if(selected.foto) base.push("places.photos.name");
-  if(selected.resumen) base.push("places.editorialSummary");
-  // mapsUri ya se devuelve con googleMapsUri (no pedir más)
+  if(flags.short)   base.push("places.shortFormattedAddress");
+  if(flags.horario) base.push("places.currentOpeningHours.openNow","places.currentOpeningHours.weekdayDescriptions");
+  if(flags.foto)    base.push("places.photos.name");
+  if(flags.resumen) base.push("places.editorialSummary");
   return base.join(",");
 }
 
-/* geocodificación robusta (colonia+ciudad+estado → ciudad+estado → ciudad → estado → CP) */
-async function geocodeCombo({colonia, ciudad, estado, cp, key}){
-  const tryList = [];
-  if(cp) tryList.push({type:'cp', url: `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(cp)}&key=${key}`});
-  if(colonia && ciudad && estado) tryList.push({type:'full', q:`${colonia}, ${ciudad}, ${estado}`});
-  if(ciudad && estado) tryList.push({type:'citystate', q:`${ciudad}, ${estado}`});
-  if(ciudad) tryList.push({type:'city', q: ciudad});
-  if(estado) tryList.push({type:'state', q: estado});
-
-  for(const t of tryList){
-    try{
-      let url = t.url || `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(t.q)}&key=${key}`;
-      const r = await fetch(url);
-      const j = await r.json();
-      if(j.results && j.results[0]){
-        const g = j.results[0].geometry;
-        return {
-          lat: g.location.lat,
-          lng: g.location.lng,
-          viewport: g.viewport || null,
-          normalized: j.results[0].formatted_address
-        };
-      }
-    }catch{}
+async function geocodeText(q, key){
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?region=mx&address=${encodeURIComponent(q)}&key=${key}`;
+  const r = await fetch(url); const j = await r.json();
+  if(j.results && j.results[0]){
+    const g=j.results[0].geometry;
+    return {lat:g.location.lat,lng:g.location.lng,viewport:g.viewport||null, label:j.results[0].formatted_address, mode:`texto: ${q}`};
   }
   return null;
 }
+async function geocodeCP(cp, key){
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?components=postal_code:${cp}|country:MX&key=${key}`;
+  const r = await fetch(url); const j = await r.json();
+  if(j.results && j.results[0]){
+    const g=j.results[0].geometry;
+    return {lat:g.location.lat,lng:g.location.lng,viewport:g.viewport||null, label:j.results[0].formatted_address, mode:`CP: ${cp}`};
+  }
+  return null;
+}
+async function geocodeSmart({colonia,ciudad,estado,cp,key}){
+  // 1) CP
+  if(cp){
+    const a = await geocodeCP(cp,key); if(a) return a;
+  }
+  // 2) colonia+ciudad+estado
+  if(colonia && ciudad && estado){
+    const a = await geocodeText(`${colonia}, ${ciudad}, ${estado}`, key); if(a) return a;
+  }
+  // 3) ciudad+estado
+  if(ciudad && estado){ const a = await geocodeText(`${ciudad}, ${estado}`, key); if(a) return a; }
+  // 4) ciudad
+  if(ciudad){ const a = await geocodeText(ciudad, key); if(a) return a; }
+  // 5) estado
+  if(estado){ const a = await geocodeText(estado, key); if(a) return a; }
+  return null;
+}
 
-/* textSearch con paginación hasta ~200 (si Google entrega) */
+function detectPartners(website){
+  const s=(website||"").toLowerCase();
+  const rules=[["opentable","reservas"],["ubereats","delivery"],["rappi","delivery"],["didi","delivery"],["doordash","delivery"]];
+  for(const [k,lbl] of rules){ if(s.includes(k)) return `${lbl}:${k}`; }
+  return "";
+}
+
+function rowFromPlace({p, combo, flags}){
+  const addr = p.shortFormattedAddress || p.formattedAddress || "";
+  const cat  = p.primaryTypeDisplayName || p.primaryType || (p.types||[])[0] || "";
+  const phone= p.nationalPhoneNumber || p.internationalPhoneNumber || "";
+  const web  = p.websiteUri || ""; // textSearch no siempre lo trae; mantenemos heurística simple
+  return {
+    "KW": combo.kw,
+    "State": combo.estado||"",
+    "City":  combo.ciudad||"",
+    "Colony": combo.colonia||"",
+    "Postal Code": (addr.match(/\\b\\d{4,6}\\b/)||[])[0] || "",
+    "Company Name": (p.displayName&&p.displayName.text)||"",
+    "Category": cat,
+    "Website": web,
+    "Phone": phone,
+    "email": "",
+    "address": addr,
+    "Lat": p.location?.latitude ?? "",
+    "Lng": p.location?.longitude ?? "",
+    "Horario": flags.horario ? (p.currentOpeningHours?.weekdayDescriptions||[]).join(" | ") : "",
+    "Precio": flags.precio ? (p.priceLevel ?? "") : "",
+    "Partners": flags.partners ? detectPartners(web) : "",
+    "Review": p.rating ?? "",
+    "# Reviews": p.userRatingCount ?? "",
+    "MapLink": p.googleMapsUri || ""
+  };
+}
+
+function toCsv(rows){
+  if(!rows.length) return "";
+  const head = Object.keys(rows[0]);
+  const esc = v => (v==null?"":String(v)).replace(/"/g,'""');
+  const lines = [head.join(","), ...rows.map(r=>head.map(k=>`"${esc(r[k])}"`).join(","))];
+  return lines.join("\\r\\n");
+}
+
+function paint(rows){
+  const tb = $("#tbody"); tb.innerHTML="";
+  const frag = document.createDocumentFragment();
+  rows.forEach(r=>{
+    const tr=document.createElement("tr");
+    Object.values(r).forEach(v=>{
+      const td=document.createElement("td"); td.textContent=(v==null?"":v); tr.appendChild(td);
+    });
+    frag.appendChild(tr);
+  });
+  tb.appendChild(frag);
+  $("#resCount").textContent = rows.length;
+}
+
+/* Places search paginado */
 async function textSearchAll({kw, center, radiusM, key, mask}){
-  const headers = {
+  const headers={
     "Content-Type":"application/json",
     "X-Goog-Api-Key": key,
     "X-Goog-FieldMask": mask + ",nextPageToken"
   };
-  const bodyBase = {
+  const base={
     textQuery: kw,
     languageCode:"es",
     regionCode:"MX",
     locationBias:{ circle:{ center:{ latitude:center.lat, longitude:center.lng }, radius: radiusM } },
-    pageSize: 20
+    pageSize:20
   };
-
-  const out = [];
-  const seen = new Set();
-  let pageToken=null, guard=0;
-
+  const out=[]; const seen=new Set(); let token=null, guard=0;
   while(guard++<10){
-    const body = {...bodyBase};
-    if(pageToken) body.pageToken = pageToken;
-
-    const r = await fetch("https://places.googleapis.com/v1/places:searchText",{method:"POST",headers,body:JSON.stringify(body)});
-    if(!r.ok){
-      const t = await r.text();
-      throw new Error(`HTTP ${r.status} en searchText: ${t}`);
-    }
-    const j = await r.json();
-    (j.places||[]).forEach(p=>{
-      if(!p.id || seen.has(p.id)) return;
-      seen.add(p.id); out.push(p);
-    });
-    pageToken = j.nextPageToken || null;
-    if(!pageToken) break;
-    await new Promise(r=>setTimeout(r, 1200));
+    const body={...base}; if(token) body.pageToken=token;
+    const r=await fetch("https://places.googleapis.com/v1/places:searchText",{method:"POST",headers,body:JSON.stringify(body)});
+    if(!r.ok){ const t=await r.text(); throw new Error(`HTTP ${r.status} en searchText: ${t}`); }
+    const j=await r.json();
+    (j.places||[]).forEach(p=>{ if(!p.id||seen.has(p.id)) return; seen.add(p.id); out.push(p); });
+    token=j.nextPageToken||null; if(!token) break;
+    await new Promise(r=>setTimeout(r,1200));
   }
   return out;
 }
 
-/* enriquecedores simples */
-function extractWebsiteFromPlace(p){
-  // si viene website del detalle, úsalo; en v1 textsearch no siempre viene, pero
-  // probaremos con una heurística: algunas veces types incluyen entidades con dominios no…
-  // preferimos googleMapsUri entonces
-  return p.websiteUri || "";
-}
-function detectPartners(web){
-  const s = (web||"").toLowerCase();
-  const map = [
-    ["opentable","reservas"],
-    ["ubereats","delivery"],
-    ["rappi","delivery"],
-    ["didi","delivery"],
-    ["didi-food","delivery"],
-    ["doordash","delivery"],
-    ["justeat","delivery"]
-  ];
-  for(const [k,lbl] of map){
-    if(s.includes(k)) return `${lbl}:${k}`;
-  }
-  return "";
-}
+/* ==================== run ==================== */
+const state={rows:[]};
 
-/* CSV */
-function toCsv(rows){
-  const head = Object.keys(rows[0]||{});
-  const esc = v => (v==null?"":String(v)).replace(/"/g,'""');
-  const lines = [
-    head.join(","),
-    ...rows.map(r=>head.map(k=>`"${esc(r[k])}"`).join(","))
-  ];
-  return lines.join("\\r\\n");
-}
+function getCombos(){
+  const kws=arr($("#kw").value);
+  const ciudades=arr($("#ciudades").value);
+  const estados=arr($("#estados").value);
+  const colonias=arr($("#colonias").value);
+  const cps=cleanCPs($("#cps").value);
 
-/* ----------------------- flujo principal ------------------------------- */
-const state = { rows:[] };
-
-function collectCombos(){
-  const arr = (t)=> t.split(/\\r?\\n|,/).map(s=>s.trim()).filter(Boolean);
-  const kws = arr($("#kw").value);                // al menos 1
-  const ciudades = arr($("#ciudades").value);     // 1+
-  const estados  = arr($("#estados").value);      // 0/1+
-  const colonias = arr($("#colonias").value);     // 0/1+
-  const cps      = arr($("#cps").value);          // 0/+
-
-  const combos = [];
-  const norm = (a)=> (a.length? a : [""]);
-
+  const combos=[];
+  const nz=a=>a.length?a:[""];
   for(const kw of kws){
-    for(const ciudad of norm(ciudades)){
-      for(const estado of norm(estados)){
-        // si hay CPs, genero combos por cada CP (ignora colonia)
+    // si hay CPs, también genero combos por CP
+    for(const ciudad of nz(ciudades)){
+      for(const estado of nz(estados)){
         if(cps.length){
-          for(const cp of cps){
-            combos.push({kw, ciudad, estado, colonia:"", cp});
-          }
-        }else{
-          for(const colonia of norm(colonias)){
-            combos.push({kw, ciudad, estado, colonia, cp:""});
-          }
+          for(const cp of cps) combos.push({kw,ciudad,estado,colonia:"",cp});
         }
+        // además, si hay colonias, también
+        for(const colonia of nz(colonias)){
+          if(colonia) combos.push({kw,ciudad,estado,colonia,cp:""});
+        }
+        // si no hay ni colonias ni cps, también agrego el combo base ciudad/estado
+        if(!cps.length && !colonias.length) combos.push({kw,ciudad,estado,colonia:"",cp:""});
       }
     }
   }
@@ -398,134 +358,72 @@ function currentFlags(){
     partners:$("#fPartners").checked,
     wantLL:  $("#wantLL").checked,
     wantWeb: $("#wantWeb").checked,
-    wantEmail: $("#wantEmail").checked
+    wantMail:$("#wantMail").checked
   };
-}
-
-function rowFromPlace({p, combo, flags}){
-  const addr = p.shortFormattedAddress || p.formattedAddress || "";
-  const phone = p.nationalPhoneNumber || p.internationalPhoneNumber || "";
-  const cat = p.primaryTypeDisplayName || p.primaryType || (p.types||[])[0] || "";
-  const web = extractWebsiteFromPlace(p);
-  const partners = flags.partners ? detectPartners(web) : "";
-
-  return {
-    "KW": combo.kw,
-    "State": combo.estado || "",
-    "City": combo.ciudad || "",
-    "Colony": combo.colonia || "",
-    "Postal Code": (p.plusCode && p.plusCode.globalCode ? (addr.match(/\\b\\d{4,6}\\b/)||[])[0] || "" : (addr.match(/\\b\\d{4,6}\\b/)||[])[0] || ""),
-    "Company Name": (p.displayName&&p.displayName.text)||"",
-    "Category": cat,
-    "Website": web,
-    "Phone": phone,
-    "email": "", // opcional si implementas descubrimiento
-    "address": addr,
-    "Lat": p.location?.latitude ?? "",
-    "Lng": p.location?.longitude ?? "",
-    "Horario": flags.horario ? (p.currentOpeningHours?.weekdayDescriptions||[]).join(" | ") : "",
-    "Precio": flags.precio ? (p.priceLevel ?? "") : "",
-    "Partners": partners,
-    "Review": p.rating ?? "",
-    "# Reviews": p.userRatingCount ?? "",
-    "MapLink": p.googleMapsUri || ""
-  };
-}
-
-function paint(){
-  const tb = $("#tbody"); tb.innerHTML = "";
-  const frag = document.createDocumentFragment();
-  state.rows.forEach(r=>{
-    const tr = document.createElement("tr");
-    Object.values(r).forEach(v=>{
-      const td = document.createElement("td");
-      td.textContent = v==null?"":v; tr.appendChild(td);
-    });
-    frag.appendChild(tr);
-  });
-  tb.appendChild(frag);
-  $("#resCount").textContent = state.rows.length;
 }
 
 async function start(){
   clearLog();
-  const key = $("#apiKey").value.trim();
-  if(!key){ log("✋ Coloca tu API Key"); return; }
+  const key=$("#apiKey").value.trim();
+  if(!key){ appendLog("✋ Coloca tu API Key"); return; }
 
-  const combos = collectCombos();
-  if(!combos.length){ log("✋ Escribe al menos 1 keyword y 1 ciudad"); return; }
+  const combos=getCombos();
+  if(!combos.length){ appendLog("✋ Escribe al menos 1 keyword y 1 ciudad/estado/cp"); return; }
 
-  const flags = currentFlags();
-  const radiusM = Math.max(1, Number($("#radioKm").value||3))*1000;
-  state.rows = []; paint();
+  const flags=currentFlags();
+  const radiusM=Math.max(1, Number($("#radioKm").value||3))*1000;
 
-  // Build field mask
-  const mask = fieldMask({
-    short: flags.short, horario: flags.horario, foto: flags.foto, resumen: flags.resumen
-  });
+  state.rows=[]; paint(state.rows);
 
-  let uniquePlaces = new Map();
-  let combosOK = 0;
+  const mask=fieldMask({short:flags.short,horario:flags.horario,foto:flags.foto,resumen:flags.resumen});
+  const dedup=new Map();
 
   for(const combo of combos){
-    const label = [combo.colonia, combo.ciudad, combo.estado, combo.cp].filter(Boolean).join(", ");
-    log(`Buscando "${combo.kw}" @ "${label}" (radio ${(radiusM/1000)|0} km)…`);
-    // Geocode
-    let geo = await geocodeCombo({colonia:combo.colonia, ciudad:combo.ciudad, estado:combo.estado, cp:combo.cp, key});
-    if(!geo){
-      log(`⚠️ No se pudo geocodificar: ${label}`);
-      continue;
-    }
-    combosOK++;
+    const label=[combo.colonia, combo.ciudad, combo.estado, combo.cp].filter(Boolean).join(", ");
+    appendLog(`Buscando "${combo.kw}" @ "${label}" (radio ${(radiusM/1000)|0} km)…`);
+    const geo=await geocodeSmart({colonia:combo.colonia,ciudad:combo.ciudad,estado:combo.estado,cp:combo.cp,key});
+    if(!geo){ appendLog(`⚠️ No se pudo geocodificar: ${label}`); continue; }
+    appendLog(`  → Geocode por ${geo.mode} → ${geo.label}`);
 
-    // Text search (paginado)
-    let places = [];
+    let places=[];
     try{
-      places = await textSearchAll({kw:combo.kw, center:{lat:geo.lat,lng:geo.lng}, radiusM, key, mask});
-      log(`  → ${places.length} resultados`);
-    }catch(e){
-      log(`❌ Error "${combo.kw}" @ "${label}": ${e.message}`);
-      continue;
-    }
+      places = await textSearchAll({kw:combo.kw,center:{lat:geo.lat,lng:geo.lng},radiusM,key,mask});
+      appendLog(`  → ${places.length} resultados`);
+    }catch(e){ appendLog(`❌ Error "${combo.kw}" @ "${label}": ${e.message}`); continue; }
 
-    // convertir a filas + deduplicar por id
     for(const p of places){
-      if(uniquePlaces.has(p.id)) continue;
-      const row = rowFromPlace({p, combo, flags});
-      uniquePlaces.set(p.id, row);
-      state.rows.push(row);
+      if(dedup.has(p.id)) continue;
+      const row=rowFromPlace({p,combo,flags});
+      dedup.set(p.id,true); state.rows.push(row);
     }
-    paint();
-    await new Promise(r=>setTimeout(r,500));
+    paint(state.rows);
+    await new Promise(r=>setTimeout(r,400));
   }
 
-  log(`Proceso finalizado. Lugares únicos: ${state.rows.length}.`);
-  countapiHit('runs');
+  appendLog(`Proceso finalizado. Lugares únicos: ${state.rows.length}.`);
+  capiHit("runs");
 }
 
 function downloadCsv(){
   if(!state.rows.length){ alert("No hay datos."); return; }
-  const csv = toCsv(state.rows);
-  const blob = new Blob([csv],{type:"text/csv;charset=utf-8"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = "places.csv"; document.body.appendChild(a); a.click(); a.remove();
+  const csv=toCsv(state.rows);
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download="places.csv"; document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
 
 $("#btnStart").addEventListener("click", start);
 $("#btnCsv").addEventListener("click", downloadCsv);
 
-// filtros rápidos por cabecera
 $$(".filters input").forEach(inp=>{
-  inp.addEventListener("input", ()=>{
-    const col = inp.getAttribute("data-col");
-    const q = inp.value.toLowerCase();
-    const idx = Array.from($("#tbl thead tr:nth-child(1)").children).findIndex(th=>th.textContent.trim()===col);
+  inp.addEventListener("input",()=>{
+    const col=inp.getAttribute("data-col");
+    const q=inp.value.toLowerCase();
+    const idx=Array.from(document.querySelectorAll("#tbl thead tr:first-child th")).findIndex(th=>th.textContent.trim()===col);
     $("#tbody").querySelectorAll("tr").forEach(tr=>{
-      const td = tr.children[idx];
-      const t = (td?.textContent||"").toLowerCase();
-      tr.style.display = t.includes(q) ? "" : "none";
+      const t=(tr.children[idx]?.textContent||"").toLowerCase();
+      tr.style.display = t.includes(q)? "" : "none";
     });
   });
 });
