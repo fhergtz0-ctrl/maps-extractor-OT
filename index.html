@@ -280,7 +280,8 @@
       "places.formattedAddress","places.shortFormattedAddress",
       "places.addressComponents","places.location",
       "places.nationalPhoneNumber","places.internationalPhoneNumber",
-      "places.googleMapsUri","places.priceLevel","places.rating","places.userRatingCount",
+      "places.googleMapsUri","places.websiteUri",
+      "places.priceLevel","places.rating","places.userRatingCount",
       "places.currentOpeningHours.openNow","places.currentOpeningHours.weekdayDescriptions",
       "places.editorialSummary","places.photos.name"
     ];
@@ -337,6 +338,31 @@
     $("#btnStart").addEventListener("click", start);
     $("#btnDownload").addEventListener("click", ()=>downloadCSV(`maps-extractor-${new Date().toISOString().slice(0,10)}.csv`, toCSV(rowsData)));
 
+    // convierte el viewport de Maps JS al formato de Places v1
+    function viewportToRectangleBias(viewport){
+      try{
+        if(viewport?.getSouthWest && viewport?.getNorthEast){
+          const sw=viewport.getSouthWest(), ne=viewport.getNorthEast();
+          return {
+            rectangle:{
+              low:{  latitude: sw.lat(), longitude: sw.lng() },
+              high:{ latitude: ne.lat(), longitude: ne.lng() }
+            }
+          };
+        }
+        if(viewport?.toJSON){
+          const {south,west,north,east}=viewport.toJSON();
+          return {
+            rectangle:{
+              low:{  latitude: south, longitude: west },
+              high:{ latitude: north, longitude: east }
+            }
+          };
+        }
+      }catch{}
+      return null;
+    }
+
     async function start(){
       try{
         clearLog(); clearRows();
@@ -347,7 +373,7 @@
         const state=$("#state").value.trim();
         const city=$("#city").value.trim();
         const colony=$("#colony").value.trim();
-        const colonia = colony; // <-- alias por si quedó alguna referencia a "colonia"
+        const colonia = colony; // alias defensivo
         const cps=$("#postalCodes").value.trim();
         const radiusKm=Math.max(1, parseFloat($("#radiusKm").value)||3);
 
@@ -376,8 +402,12 @@
 
         let bias=undefined;
         if(geo.ok){
-          if(geo.viewport?.toJSON) bias={ rectangle: geo.viewport.toJSON() };
-          else bias={ circle:{ center:{ latitude:geo.lat, longitude:geo.lng }, radius: radiusKm*1000 } };
+          const rectBias = viewportToRectangleBias(geo.viewport);
+          if(rectBias) {
+            bias = rectBias;
+          } else {
+            bias = { circle:{ center:{ latitude:geo.lat, longitude:geo.lng }, radius: radiusKm*1000 } };
+          }
         }
 
         for(const kw of kwList){
