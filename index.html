@@ -4,85 +4,44 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Scrapping Tool — Google Maps Places</title>
+<meta name="build" content="build-2025-08-29-2" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Ccircle cx='64' cy='64' r='64' fill='%2322c55e'/%3E%3Cpath d='M64 20c-18 0-32 14-32 32 0 17 26 46 30 50 2 2 5 2 6 0 4-4 30-33 30-50 0-18-14-32-34-32zm0 48a16 16 0 1 1 0-32 16 16 0 0 1 0 32z' fill='%23fff'/%3E%3C/svg%3E" />
 <style>
-  :root{
-    --bg:#0b0e11; --panel:#11161b; --muted:#88919c; --txt:#e6eef6;
-    --brand:#22c55e; --accent:#0ea5e9; --bad:#ef4444; --chip:#1b2330;
-    --border:#1f2937;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial,'Noto Sans',sans-serif}
+  :root{--bg:#0b0e11;--panel:#11161b;--muted:#88919c;--txt:#e6eef6;--brand:#22c55e;--border:#1f2937;--chip:#1b2330}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial,'Noto Sans',sans-serif}
   .wrap{max-width:1360px;margin:0 auto;padding:16px}
-  h1{margin:0 0 10px;font-size:22px}
-  .subtitle{color:var(--muted);margin-bottom:14px}
-
+  h1{margin:0 0 6px;font-size:22px}.subtitle{color:var(--muted);margin-bottom:12px}
   .toolbar{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;align-items:end;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px}
-  .field{display:flex;flex-direction:column;gap:6px}
-  .field label{font-size:12px;color:var(--muted)}
-  textarea, input[type="text"], input[type="number"]{
-    background:#0e141a;border:1px solid var(--border);color:var(--txt);border-radius:10px;padding:10px 12px;font-size:14px;outline:none
-  }
+  .field{display:flex;flex-direction:column;gap:6px}.field label{font-size:12px;color:var(--muted)}
+  textarea,input[type="text"],input[type="number"]{background:#0e141a;border:1px solid var(--border);color:var(--txt);border-radius:10px;padding:10px 12px;font-size:14px;outline:none}
   textarea{resize:vertical;min-height:40px;max-height:140px}
-  .chips{display:flex;gap:10px;flex-wrap:wrap}
-  .chip{display:flex;align-items:center;gap:8px;background:var(--chip);border:1px solid var(--border);padding:8px 10px;border-radius:999px;font-size:13px}
-  .actions{display:flex;gap:10px;justify-content:flex-end}
-  .btn{appearance:none;border:none;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer}
-  .btn-primary{background:var(--brand);color:#071307}
-  .btn-ghost{background:#0f151b;color:var(--txt);border:1px solid var(--border)}
+  .chips{display:flex;gap:10px;flex-wrap:wrap}.chip{display:flex;align-items:center;gap:8px;background:var(--chip);border:1px solid var(--border);padding:8px 10px;border-radius:999px;font-size:13px}
+  .actions{display:flex;gap:10px;justify-content:flex-end}.btn{appearance:none;border:none;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer}
+  .btn-primary{background:var(--brand);color:#071307}.btn-ghost{background:#0f151b;color:var(--txt);border:1px solid var(--border)}
   .badge{display:inline-flex;align-items:center;gap:8px;background:#0f151b;border:1px dashed var(--border);padding:8px 10px;border-radius:10px;color:var(--muted);font-size:13px}
-
   .console{margin-top:12px;background:#0f1419;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:#aab4bf;white-space:pre-wrap}
-
   .table-wrap{margin-top:14px;background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:auto}
   table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
   thead th{position:sticky;top:0;background:#0f151b;color:#cbd5e1;font-weight:600;font-size:13px;padding:10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
   tbody td{font-size:13px;color:#e5eef9;border-bottom:1px solid var(--border);padding:8px 10px;vertical-align:top;white-space:nowrap}
   thead th .filter{display:block;margin-top:6px;background:#0c1015;border:1px solid var(--border);color:#aab4bf;border-radius:8px;padding:6px 8px;width:200px;font-size:12px}
-  .th-shrink{width:140px}
-  .th-mini{width:90px}
-  .th-wide{width:280px}
-  .nowrap{white-space:nowrap}
-
-  .c-keywords{grid-column:span 3}
-  .c-cities{grid-column:span 2}
-  .c-states{grid-column:span 2}
-  .c-colonies{grid-column:span 2}
-  .c-zips{grid-column:span 1}
-  .c-key{grid-column:span 2}
-  .c-radius{grid-column:span 1}
-  .c-emailsec{grid-column:span 1}
-  .c-extras{grid-column:span 6}
-  .c-actions{grid-column:span 3;display:flex;gap:10px;align-items:center;justify-content:flex-end}
+  .th-mini{width:90px}.th-shrink{width:140px}.th-wide{width:280px}
+  .c-keywords{grid-column:span 3}.c-cities{grid-column:span 2}.c-states{grid-column:span 2}.c-colonies{grid-column:span 2}.c-zips{grid-column:span 1}
+  .c-key{grid-column:span 2}.c-radius{grid-column:span 1}.c-emailsec{grid-column:span 1}.c-extras{grid-column:span 6}.c-actions{grid-column:span 3;display:flex;gap:10px;align-items:center;justify-content:flex-end}
   .muted{color:var(--muted)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Scrapping Tool — <span class="muted">Google Maps Places</span></h1>
-  <div class="subtitle">Barra única con filtros, paginación por combinación (hasta 60), y columnas separadas para Estado / Ciudad / Colonia / CP.</div>
+  <div class="subtitle">Barra única (build <b id="build"></b>), columnas separadas Estado / Ciudad / Colonia / CP. Marca “Campos extra”.</div>
 
   <section class="toolbar">
-    <div class="field c-keywords">
-      <label>Keywords (uno por línea)</label>
-      <textarea id="kw" placeholder="Restaurantes&#10;Tacos"></textarea>
-    </div>
-    <div class="field c-cities">
-      <label>Ciudad(es)</label>
-      <textarea id="cities" placeholder="Cabo San Lucas&#10;Hermosillo"></textarea>
-    </div>
-    <div class="field c-states">
-      <label>Estado(s)</label>
-      <textarea id="states" placeholder="Baja California Sur&#10;Sonora"></textarea>
-    </div>
-    <div class="field c-colonies">
-      <label>Colonia(s) (opcional)</label>
-      <textarea id="colonies" placeholder="Centro"></textarea>
-    </div>
-    <div class="field c-zips">
-      <label>Códigos postales (opcional)</label>
-      <textarea id="zips" placeholder="23450&#10;83000"></textarea>
-    </div>
+    <div class="field c-keywords"><label>Keywords (uno por línea)</label><textarea id="kw" placeholder="Restaurantes&#10;Tacos"></textarea></div>
+    <div class="field c-cities"><label>Ciudad(es)</label><textarea id="cities" placeholder="Hermosillo&#10;Cabo San Lucas"></textarea></div>
+    <div class="field c-states"><label>Estado(s)</label><textarea id="states" placeholder="Sonora&#10;Baja California Sur"></textarea></div>
+    <div class="field c-colonies"><label>Colonia(s) (opcional)</label><textarea id="colonies" placeholder="Centro"></textarea></div>
+    <div class="field c-zips"><label>Códigos postales (opcional)</label><textarea id="zips" placeholder="83000&#10;23450"></textarea></div>
 
     <div class="field c-key">
       <label>API Key</label>
@@ -94,15 +53,8 @@
       </div>
     </div>
 
-    <div class="field c-radius">
-      <label>Radio por consulta (km)</label>
-      <input id="radiusKm" type="number" min="1" max="50" value="5">
-    </div>
-
-    <div class="field c-emailsec">
-      <label>Seg máx. email</label>
-      <input id="emailWait" type="number" min="0" max="30" value="10">
-    </div>
+    <div class="field c-radius"><label>Radio por consulta (km)</label><input id="radiusKm" type="number" min="1" max="50" value="3"></div>
+    <div class="field c-emailsec"><label>Seg máx. email</label><input id="emailWait" type="number" min="0" max="30" value="10"></div>
 
     <div class="field c-extras">
       <label>Campos extra</label>
@@ -162,350 +114,214 @@
 </div>
 
 <script>
+const BUILD = document.querySelector('meta[name="build"]').content;
+document.getElementById('build').textContent = BUILD;
+
+// helpers
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
-const log = (msg, cls="")=>{
-  const el = $("#log");
-  el.textContent = el.textContent ? (el.textContent + "\\n" + msg) : msg;
-  if(cls){ el.className = "console " + cls; }
+const log = (m, cls="")=>{
+  const el=$("#log"); el.textContent = el.textContent ? el.textContent+"\\n"+m : m;
+  if(cls) el.className = "console "+cls;
 };
 const setFound = n => $("#found").textContent = n;
-
-const byCol = key => (tr) => (tr.dataset[key]||"").toLowerCase();
+const byCol = key => tr => (tr.dataset[key]||"").toLowerCase();
 const applyFilters = ()=>{
-  const filters = {};
-  $$(".filter").forEach(inp => {
-    if(inp.value.trim()) filters[inp.dataset.col] = inp.value.trim().toLowerCase();
-  });
+  const f={}; $$(".filter").forEach(i=>{ if(i.value.trim()) f[i.dataset.col]=i.value.trim().toLowerCase(); });
   $$("#tbody tr").forEach(tr=>{
-    let ok = true;
-    for(const k in filters){
-      if(!byCol(k)(tr).includes(filters[k])){ ok=false; break; }
-    }
-    tr.style.display = ok ? "" : "none";
+    let ok=true; for(const k in f){ if(!byCol(k)(tr).includes(f[k])){ ok=false; break; } }
+    tr.style.display = ok? "" : "none";
   });
 };
-document.addEventListener("input", e=>{
-  if(e.target.classList.contains("filter")) applyFilters();
+document.addEventListener("input", e=>{ if(e.target.classList.contains("filter")) applyFilters(); });
+
+let RESULTS=[], running=false, mapsLoaded=false;
+
+const loadMaps = key => new Promise((res,rej)=>{
+  if(mapsLoaded) return res();
+  const s=document.createElement("script");
+  s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly`;
+  s.onload=()=>{ mapsLoaded=true; res(); };
+  s.onerror=()=>rej(new Error("No se pudo cargar Maps JS")); document.head.appendChild(s);
 });
 
-let RESULTS = [];
-let running = false;
-let mapsLoaded = false;
-
-const loadMaps = (key) => new Promise((resolve,reject)=>{
-  if(mapsLoaded) return resolve();
-  const s = document.createElement("script");
-  s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly`;
-  s.onload = ()=>{ mapsLoaded=true; resolve(); };
-  s.onerror = ()=>reject(new Error("No se pudo cargar Maps JS"));
-  document.head.appendChild(s);
-});
-
-const geocodeOne = (s) => new Promise((resolve)=>{
-  const g = new google.maps.Geocoder();
-  g.geocode({ address: s }, (res, status)=>{
-    if(status==="OK" && res?.[0]){
-      const r = res[0];
-      const loc = r.geometry.location;
-      const comp = parseAddressComponents(r.address_components||[]);
-      resolve({ lat: loc.lat(), lng: loc.lng(), components: comp, viewport: r.geometry.viewport || null });
-    } else {
-      resolve(null);
-    }
+const geocoder = ()=> new google.maps.Geocoder();
+function geocodeOne(q){ return new Promise(resolve=>{
+  geocoder().geocode({address:q}, (r,st)=>{
+    if(st==="OK" && r?.[0]){
+      const g=r[0].geometry, loc=g.location;
+      resolve({
+        lat: Number(loc.lat()), lng: Number(loc.lng()),
+        viewport: g.viewport || null,
+        components: parseComps(r[0].address_components||[])
+      });
+    }else resolve(null);
   });
-});
-
-function parseAddressComponents(comps){
-  const out = { country:"", state:"", city:"", postal:"", colony:"" };
-  comps.forEach(c=>{
-    if(c.types.includes("administrative_area_level_1")) out.state = c.long_name;
-    if(c.types.includes("locality")) out.city = c.long_name;
-    if(c.types.includes("sublocality") || c.types.includes("neighborhood")) out.colony = out.colony || c.long_name;
-    if(c.types.includes("postal_code")) out.postal = c.long_name;
-    if(c.types.includes("country")) out.country = c.long_name;
-  });
-  return out;
+});}
+function parseComps(c){
+  const o={country:"",state:"",city:"",postal:"",colony:""};
+  c.forEach(x=>{
+    if(x.types.includes("administrative_area_level_1")) o.state=x.long_name;
+    if(x.types.includes("locality")) o.city=x.long_name;
+    if(x.types.includes("sublocality")||x.types.includes("neighborhood")) o.colony=o.colony||x.long_name;
+    if(x.types.includes("postal_code")) o.postal=x.long_name;
+    if(x.types.includes("country")) o.country=x.long_name;
+  }); return o;
 }
 
-async function textSearchAll(apiKey, body){
-  const url = "https://places.googleapis.com/v1/places:searchText";
-  const headers = {
+async function textSearchAll(key, body){
+  const url="https://places.googleapis.com/v1/places:searchText";
+  const headers={
     "Content-Type":"application/json",
-    "X-Goog-Api-Key": apiKey,
-    "X-Goog-FieldMask": [
-      "places.id",
-      "places.displayName",
-      "places.primaryType",
-      "places.types",
-      "places.formattedAddress",
-      "places.addressComponents",
-      "places.shortFormattedAddress",
-      "places.location",
-      "places.plusCode",
-      "places.nationalPhoneNumber",
-      "places.internationalPhoneNumber",
-      "places.rating",
-      "places.userRatingCount",
-      "places.priceLevel",
+    "X-Goog-Api-Key": key,
+    "X-Goog-FieldMask":[
+      "places.id","places.displayName","places.primaryType","places.types",
+      "places.formattedAddress","places.addressComponents","places.shortFormattedAddress",
+      "places.location","places.plusCode",
+      "places.nationalPhoneNumber","places.internationalPhoneNumber",
+      "places.rating","places.userRatingCount","places.priceLevel",
       "places.googleMapsUri",
       "places.currentOpeningHours.weekdayDescriptions",
-      "places.editorialSummary.text",
-      "places.photos.name",
-      "nextPageToken"
+      "places.editorialSummary.text","places.photos.name","nextPageToken"
     ].join(",")
   };
-
-  let out = [];
-  let page = 0;
-  let token = null;
+  let out=[], token=null, page=0;
   do{
-    const payload = token ? { ...body, pageToken: token } : body;
-    const r = await fetch(url, { method:"POST", headers, body: JSON.stringify(payload) });
-    if(!r.ok){
-      const t = await r.text().catch(()=>r.statusText);
-      throw new Error(t || ("HTTP "+r.status));
-    }
-    const j = await r.json();
+    const payload = token ? {...body, pageToken: token} : body;
+    // LOG del payload para verificar latitude/longitude:
+    console.log("[payload v"+BUILD+"]", payload);
+    const r=await fetch(url,{method:"POST",headers,body:JSON.stringify(payload)});
+    if(!r.ok){ throw new Error(await r.text().catch(()=>r.statusText)); }
+    const j=await r.json();
     out.push(...(j.places||[]));
-    token = j.nextPageToken || null;
-    page++;
-  } while(token && page < 3);
+    token=j.nextPageToken||null; page++;
+  }while(token && page<3);
   return out;
 }
 
-async function detectPartners(publicOrWebsiteUrl){
-  if(!publicOrWebsiteUrl) return "";
-  const url = /^https?:\/\//i.test(publicOrWebsiteUrl) ? publicOrWebsiteUrl : ("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(publicOrWebsiteUrl));
+async function detectPartners(url){
+  if(!url) return "";
+  const safe=/^https?:\/\//i.test(url)?url:("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(url));
   try{
-    const r = await fetch("https://r.jina.ai/http/"+url.replace(/^https?:\/\//,""));
+    const r=await fetch("https://r.jina.ai/http/"+safe.replace(/^https?:\/\//,""));
     if(!r.ok) return "";
-    const html = (await r.text()).toLowerCase();
-    const hits = [];
-    if(html.includes("opentable")) hits.push("OpenTable");
+    const html=(await r.text()).toLowerCase();
+    const hits=[]; if(html.includes("opentable")) hits.push("OpenTable");
     if(html.includes("ubereats")) hits.push("UberEats");
     if(html.includes("rappi")) hits.push("Rappi");
-    if(html.includes("didi food") || html.includes("didifood")) hits.push("DiDi Food");
-    if(html.includes("ordena") && html.includes("restaurant")) hits.push("Orden web");
+    if(html.includes("didi food")||html.includes("didifood")) hits.push("DiDi Food");
     return [...new Set(hits)].join(", ");
-  }catch(_){ return ""; }
+  }catch(_){return"";}
 }
 
-async function tryExtractEmail(website, waitSec){
+async function tryEmail(website, waitSec){
   if(!website) return "";
   try{
-    const r = await fetch("https://r.jina.ai/http/"+website.replace(/^https?:\/\//,""), { cache:"no-store" });
+    const r=await fetch("https://r.jina.ai/http/"+website.replace(/^https?:\/\//,""),{cache:"no-store"});
     if(!r.ok) return "";
-    const tx = await r.text();
-    const m = tx.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig);
-    if(m && m.length) return [...new Set(m)].slice(0,3).join(" / ");
-  }catch(_){}
-  return "";
+    const tx=await r.text();
+    const m=tx.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig);
+    return m?[...new Set(m)].slice(0,3).join(" / "):"";
+  }catch(_){return"";}
 }
 
 function pushRow(row){
   RESULTS.push(row);
-  const tr = document.createElement("tr");
-  const cols = [
-    "kw","state","city","colony","name","category","website","phone","email","address","postal","lat","lng","types","price","hours","summary","photo","reviews","rating","cid","map","partners"
-  ];
-  cols.forEach(c=>{
-    const td = document.createElement("td");
-    td.textContent = row[c] || "";
-    tr.appendChild(td);
-  });
-  for(const k of cols) tr.dataset[k] = (row[k]||"").toString();
-  $("#tbody").appendChild(tr);
-  setFound(RESULTS.length);
+  const tr=document.createElement("tr");
+  const cols=["kw","state","city","colony","name","category","website","phone","email","address","postal","lat","lng","types","price","hours","summary","photo","reviews","rating","cid","map","partners"];
+  cols.forEach(c=>{const td=document.createElement("td"); td.textContent=row[c]||""; tr.appendChild(td); tr.dataset[c]=(row[c]||"")+"";});
+  $("#tbody").appendChild(tr); setFound(RESULTS.length);
 }
 
 $("#btnStart").addEventListener("click", async ()=>{
   if(running) return;
-  RESULTS = []; $("#tbody").innerHTML=""; setFound(0);
-  $("#log").textContent = "Iniciando…";
-  running = true;
-
+  RESULTS=[]; $("#tbody").innerHTML=""; setFound(0); log("Iniciando…"); running=true;
   try{
-    const key = $("#apiKey").value.trim();
-    if(!key){ running=false; return log("Coloca tu API Key", "err"); }
+    const key=$("#apiKey").value.trim(); if(!key){ running=false; return log("Coloca tu API Key","err"); }
     await loadMaps(key);
 
-    const radiusKm   = parseFloat($("#radiusKm").value)||3;
-    const radiusM    = Math.max(1, radiusKm)*1000;
-    const waitMail   = parseInt($("#emailWait").value)||10;
+    const radiusKm=+($("#radiusKm").value||3), radiusM=Math.max(1,radiusKm)*1000;
+    const wantLatLng=$("#wantLatLng").checked, wantWebsite=$("#wantWebsite").checked, wantEmail=$("#wantEmail").checked;
 
-    const wantLatLng = $("#wantLatLng").checked;
-    const wantWebsite= $("#wantWebsite").checked;
-    const wantEmail  = $("#wantEmail").checked;
+    const exHorario=$("#exHorario").checked, exPrecio=$("#exPrecio").checked, exMapsUri=$("#exMapsUri").checked, exFoto=$("#exFoto").checked, exTipos=$("#exTipos").checked, exShort=$("#exShortAddr").checked, exResumen=$("#exResumen").checked, exPartners=$("#exPartners").checked;
 
-    const exHorario  = $("#exHorario").checked;
-    const exPrecio   = $("#exPrecio").checked;
-    const exMapsUri  = $("#exMapsUri").checked;
-    const exFoto     = $("#exFoto").checked;
-    const exTipos    = $("#exTipos").checked;
-    const exShort    = $("#exShortAddr").checked;
-    const exResumen  = $("#exResumen").checked;
-    const exPartners = $("#exPartners").checked;
+    const KW=$("#kw").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    const CITS=$("#cities").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    const STS=$("#states").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    const COLS=$("#colonies").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    const ZIPS=$("#zips").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
 
-    const KW   = $("#kw").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-    const CITS = $("#cities").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-    const STS  = $("#states").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-    const COLS = $("#colonies").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-    const ZIPS = $("#zips").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    if(!KW.length || (!CITS.length && !ZIPS.length)){ running=false; return log("Pon al menos una Keyword y una Ciudad (o un CP).","err"); }
 
-    if(!KW.length || (!CITS.length && !ZIPS.length)){
-      running=false;
-      return log("Pon al menos una Keyword y una Ciudad (o un CP).", "err");
-    }
-
-    const combos = [];
-    ZIPS.forEach(cp => combos.push({label:`CP: ${cp}`, geostr:`${cp}`}));
+    const combos=[];
+    ZIPS.forEach(cp=>combos.push({label:`CP: ${cp}`, geostr:cp}));
     if(CITS.length){
-      const statesList = STS.length?STS:[""];
-      const colsList   = COLS.length?COLS:[""];
-      for(const city of CITS){
-        for(const st of statesList){
-          for(const col of colsList){
-            const label = [col, city, st].filter(Boolean).join(", ");
-            const geostr= label;
-            combos.push({label, geostr});
-          }
-        }
-      }
+      const states=STS.length?STS:[""], cols=COLS.length?COLS:[""];
+      for(const city of CITS){ for(const st of states){ for(const col of cols){
+        const label=[col,city,st].filter(Boolean).join(", "); combos.push({label, geostr:label});
+      } } }
     }
-
     log(`Se generaron ${combos.length} ubicacione(s).`);
 
-    for(let ci=0; ci<combos.length; ci++){
-      const { label, geostr } = combos[ci];
-
-      let centerLL = null, components=null;
-      try{
-        const g = await geocodeOne(geostr);
-        if(!g){ log(`No se pudo geocodificar: ${geostr}`,"warn"); continue; }
-        // *** FIX: Places v1 requiere latitude/longitude ***
-        centerLL = { latitude: g.lat, longitude: g.lng };
-        components = g.components;
-      }catch(e){
-        log(`Error geocodificando ${geostr}: ${e.message}`, "err");
-        continue;
-      }
+    for(const c of combos){
+      const g=await geocodeOne(c.geostr);
+      if(!g){ log(`No se pudo geocodificar: ${c.geostr}`,"warn"); continue; }
+      // *** AQUÍ LA CLAVE: latitude / longitude SIEMPRE ***
+      const centerLL={ latitude:Number(g.lat), longitude:Number(g.lng) };
 
       for(const kw of KW){
-        log(`Buscando "${kw}" @ "${label}" (radio ${radiusKm} km)…`);
-
-        const body = {
-          textQuery: `${kw}`,
-          pageSize : 20,
-          locationBias: {
-            circle: { center: centerLL, radius: radiusM }
-          }
+        log(`Buscando "${kw}" @ "${c.label}" (radio ${radiusKm} km)…`);
+        const body={
+          textQuery: kw,
+          pageSize: 20,
+          locationBias:{ circle:{ center:centerLL, radius: radiusM } }
         };
-
-        let places = [];
-        try{
-          places = await textSearchAll(key, body);
-        }catch(e){
-          log(`Error "${kw}" @ "${label}": ${e.message}`, "err");
-          continue;
-        }
+        let places=[];
+        try{ places=await textSearchAll(key, body); }
+        catch(e){ log(`Error "${kw}" @ "${c.label}": ${e.message}`,"err"); continue; }
 
         for(const p of places){
-          const name = p.displayName?.text || "";
-          const phone = p.nationalPhoneNumber || p.internationalPhoneNumber || "";
-          const cat = p.primaryType || (p.types||[]).join(", ");
+          const name=p.displayName?.text||"", phone=p.nationalPhoneNumber||p.internationalPhoneNumber||"", cat=p.primaryType||(p.types||[]).join(", ");
+          const ac=parseComps(p.addressComponents||[]);
+          const state=ac.state||g.components.state||"", city=ac.city||g.components.city||"", colony=ac.colony||g.components.colony||"", postal=ac.postal||"";
+          const address = ($("#exShortAddr").checked?(p.shortFormattedAddress||""):(p.formattedAddress||"")) || "";
+          const lat = p.location?.latitude?.toFixed(6)||"", lng=p.location?.longitude?.toFixed(6)||"";
+          const rating=p.rating??"", reviews=p.userRatingCount??"", price=exPrecio?(p.priceLevel??""):"";
+          const types=exTipos? [p.primaryType,...(p.types||[])].filter(Boolean).join(" / "):"";
+          const hours=exHorario? (p.currentOpeningHours?.weekdayDescriptions||[]).join(" | "):"";
+          const summary=exResumen? (p.editorialSummary?.text||""):"";
+          const mapUri= exMapsUri ? (p.googleMapsUri||"") : (p.googleMapsUri||"");
+          const photo= exFoto ? (p.photos?.[0]?.name||"") : "";
+          let website = wantWebsite? "" : "";
+          let email = wantEmail? await tryEmail(website, +($("#emailWait").value||10)) : "";
+          let cid=""; if(mapUri && mapUri.includes("cid=")){ const m=mapUri.match(/[?&]cid=([0-9]+)/); if(m) cid=m[1]; }
+          let partners=""; if(exPartners){ const candidate=website||mapUri; partners=await detectPartners(candidate); }
 
-          const ac = parseAddressComponents(p.addressComponents||[]);
-          const state = ac.state || components?.state || "";
-          const city  = ac.city  || components?.city  || "";
-          const colony= ac.colony|| components?.colony|| "";
-          const postal= ac.postal|| "";
-
-          const address = (exShort ? (p.shortFormattedAddress||"") : (p.formattedAddress||"")) || "";
-          const lat = p.location?.latitude?.toFixed(6) || "";
-          const lng = p.location?.longitude?.toFixed(6) || "";
-
-          const rating  = p.rating ?? "";
-          const reviews = p.userRatingCount ?? "";
-          const price   = exPrecio ? (p.priceLevel ?? "") : "";
-
-          const types   = exTipos ? [p.primaryType, ...(p.types||[])].filter(Boolean).join(" / ") : "";
-          const hours   = exHorario ? (p.currentOpeningHours?.weekdayDescriptions||[]).join(" | ") : "";
-
-          const summary = exResumen ? (p.editorialSummary?.text || "") : "";
-          const mapUri  = exMapsUri ? (p.googleMapsUri||"") : (p.googleMapsUri||"");
-
-          const photo   = exFoto ? (p.photos?.[0]?.name || "") : "";
-
-          let website = wantWebsite ? "" : "";
-          let email = wantEmail ? await tryExtractEmail(website, parseInt($("#emailWait").value)||10) : "";
-
-          let cid = "";
-          if(mapUri && mapUri.includes("cid=")){
-            const m = mapUri.match(/[?&]cid=([0-9]+)/);
-            if(m) cid = m[1];
-          }
-
-          let partners = "";
-          if(exPartners){
-            const candidate = website || mapUri;
-            partners = await detectPartners(candidate);
-          }
-
-          const row = {
-            kw: kw,
-            state, city, colony, postal,
-            name,
-            category: cat,
-            website,
-            phone,
-            email,
-            address,
-            lat: wantLatLng ? lat : "",
-            lng: wantLatLng ? lng : "",
-            types,
-            price,
-            hours,
-            summary,
-            photo,
-            reviews: reviews.toString(),
-            rating: rating.toString(),
-            cid,
-            map: mapUri,
-            partners
-          };
-          pushRow(row);
+          pushRow({
+            kw, state, city, colony, name, category:cat, website, phone, email, address, postal,
+            lat: wantLatLng?lat:"", lng: wantLatLng?lng:"", types, price, hours, summary, photo,
+            reviews:String(reviews), rating:String(rating), cid, map:mapUri, partners
+          });
         }
       }
     }
-
-    log("Proceso finalizado. Lugares únicos: " + RESULTS.length);
-  }catch(e){
-    log("Error general: " + e.message, "err");
-  }finally{
-    running = false;
-  }
+    log("Proceso finalizado. Lugares únicos: "+RESULTS.length);
+  }catch(e){ log("Error general: "+e.message,"err"); }
+  finally{ running=false; }
 });
 
 $("#btnDownload").addEventListener("click", ()=>{
-  if(!RESULTS.length){ return log("No hay datos para descargar.", "warn"); }
-  const cols = ["kw","state","city","colony","name","category","website","phone","email","address","postal","lat","lng","types","price","hours","summary","photo","reviews","rating","cid","map","partners"];
-  const head = cols.map(c=>JSON.stringify(c)).join(",");
-  const rows = RESULTS.map(r=>cols.map(c=>JSON.stringify(r[c]??"")).join(","));
-  const csv = [head, ...rows].join("\\n");
-  const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "places.csv";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  if(!RESULTS.length) return log("No hay datos para descargar.","warn");
+  const cols=["kw","state","city","colony","name","category","website","phone","email","address","postal","lat","lng","types","price","hours","summary","photo","reviews","rating","cid","map","partners"];
+  const head=cols.map(c=>JSON.stringify(c)).join(",");
+  const rows=RESULTS.map(r=>cols.map(c=>JSON.stringify(r[c]??"")).join(","));
+  const csv=[head,...rows].join("\\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"}); const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download="places.csv"; document.body.appendChild(a); a.click(); a.remove();
 });
 
 ["kw","cities","states","colonies","zips"].forEach(id=>{
-  $("#"+id).addEventListener("keydown", e=>{
-    if(e.key==="Enter" && (e.metaKey||e.ctrlKey)){ $("#btnStart").click(); }
-  });
+  $("#"+id).addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)) $("#btnStart").click(); });
 });
 </script>
 </body>
