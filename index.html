@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Scrapping Tool — Google Maps Places</title>
-<meta name="build" content="build-2025-08-29-2" />
+<meta name="build" content="build-2025-08-29-3" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Ccircle cx='64' cy='64' r='64' fill='%2322c55e'/%3E%3Cpath d='M64 20c-18 0-32 14-32 32 0 17 26 46 30 50 2 2 5 2 6 0 4-4 30-33 30-50 0-18-14-32-34-32zm0 48a16 16 0 1 1 0-32 16 16 0 0 1 0 32z' fill='%23fff'/%3E%3C/svg%3E" />
 <style>
   :root{--bg:#0b0e11;--panel:#11161b;--muted:#88919c;--txt:#e6eef6;--brand:#22c55e;--border:#1f2937;--chip:#1b2330}
@@ -125,7 +125,8 @@ const log = (m, cls="")=>{
   if(cls) el.className = "console "+cls;
 };
 const setFound = n => $("#found").textContent = n;
-const byCol = key => tr => (tr.dataset[key]||"").toLowerCase();
+const safeLower = v => (v ?? "").toString().toLowerCase();
+const byCol = key => tr => safeLower(tr.dataset[key]);
 const applyFilters = ()=>{
   const f={}; $$(".filter").forEach(i=>{ if(i.value.trim()) f[i.dataset.col]=i.value.trim().toLowerCase(); });
   $$("#tbody tr").forEach(tr=>{
@@ -161,11 +162,12 @@ function geocodeOne(q){ return new Promise(resolve=>{
 function parseComps(c){
   const o={country:"",state:"",city:"",postal:"",colony:""};
   c.forEach(x=>{
-    if(x.types.includes("administrative_area_level_1")) o.state=x.long_name;
-    if(x.types.includes("locality")) o.city=x.long_name;
-    if(x.types.includes("sublocality")||x.types.includes("neighborhood")) o.colony=o.colony||x.long_name;
-    if(x.types.includes("postal_code")) o.postal=x.long_name;
-    if(x.types.includes("country")) o.country=x.long_name;
+    const ts=x.types||[];
+    if(ts.includes("administrative_area_level_1")) o.state=x.long_name;
+    if(ts.includes("locality")) o.city=x.long_name;
+    if(ts.includes("sublocality")||ts.includes("neighborhood")) o.colony=o.colony||x.long_name;
+    if(ts.includes("postal_code")) o.postal=x.long_name;
+    if(ts.includes("country")) o.country=x.long_name;
   }); return o;
 }
 
@@ -188,8 +190,7 @@ async function textSearchAll(key, body){
   let out=[], token=null, page=0;
   do{
     const payload = token ? {...body, pageToken: token} : body;
-    // LOG del payload para verificar latitude/longitude:
-    console.log("[payload v"+BUILD+"]", payload);
+    console.log("[payload "+BUILD+"]",payload);
     const r=await fetch(url,{method:"POST",headers,body:JSON.stringify(payload)});
     if(!r.ok){ throw new Error(await r.text().catch(()=>r.statusText)); }
     const j=await r.json();
@@ -199,30 +200,41 @@ async function textSearchAll(key, body){
   return out;
 }
 
-async function detectPartners(url){
-  if(!url) return "";
-  const safe=/^https?:\/\//i.test(url)?url:("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(url));
+// === Partners (solo usando website NO-Google) ===
+const isGoogleHost = u => /(^|\.)google\.(com|[a-z.]+)\/?/i.test(u||"") || /(^|\.)g\.page/i.test(u||"") || /(^|\.)goo\.gl/i.test(u||"");
+async function detectPartnersFromWebsite(website){
+  const w=(website||"").trim();
+  if(!w) return "";
+  if(isGoogleHost(w)) return "";
   try{
-    const r=await fetch("https://r.jina.ai/http/"+safe.replace(/^https?:\/\//,""));
+    const url="https://r.jina.ai/http/"+w.replace(/^https?:\/\//,"");
+    const r=await fetch(url,{cache:"no-store"});
     if(!r.ok) return "";
     const html=(await r.text()).toLowerCase();
-    const hits=[]; if(html.includes("opentable")) hits.push("OpenTable");
+    const hits=[];
+    if(html.includes("opentable")) hits.push("OpenTable");
     if(html.includes("ubereats")) hits.push("UberEats");
     if(html.includes("rappi")) hits.push("Rappi");
     if(html.includes("didi food")||html.includes("didifood")) hits.push("DiDi Food");
+    if(html.includes("doordash")) hits.push("DoorDash");
+    if(html.includes("grubhub")) hits.push("Grubhub");
+    if(html.includes("postmates")) hits.push("Postmates");
     return [...new Set(hits)].join(", ");
   }catch(_){return"";}
 }
 
+// === Email (sólo si website y NO google) ===
 async function tryEmail(website, waitSec){
-  if(!website) return "";
+  const w=(website||"").trim(); if(!w || isGoogleHost(w)) return "";
+  const ctrl=new AbortController();
+  const to=setTimeout(()=>ctrl.abort(), Math.max(0,waitSec|0)*1000);
   try{
-    const r=await fetch("https://r.jina.ai/http/"+website.replace(/^https?:\/\//,""),{cache:"no-store"});
+    const r=await fetch("https://r.jina.ai/http/"+w.replace(/^https?:\/\//,""),{signal:ctrl.signal,cache:"no-store"});
     if(!r.ok) return "";
     const tx=await r.text();
     const m=tx.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig);
     return m?[...new Set(m)].slice(0,3).join(" / "):"";
-  }catch(_){return"";}
+  }catch(_){return"";} finally{ clearTimeout(to); }
 }
 
 function pushRow(row){
@@ -266,7 +278,6 @@ $("#btnStart").addEventListener("click", async ()=>{
     for(const c of combos){
       const g=await geocodeOne(c.geostr);
       if(!g){ log(`No se pudo geocodificar: ${c.geostr}`,"warn"); continue; }
-      // *** AQUÍ LA CLAVE: latitude / longitude SIEMPRE ***
       const centerLL={ latitude:Number(g.lat), longitude:Number(g.lng) };
 
       for(const kw of KW){
@@ -284,29 +295,32 @@ $("#btnStart").addEventListener("click", async ()=>{
           const name=p.displayName?.text||"", phone=p.nationalPhoneNumber||p.internationalPhoneNumber||"", cat=p.primaryType||(p.types||[]).join(", ");
           const ac=parseComps(p.addressComponents||[]);
           const state=ac.state||g.components.state||"", city=ac.city||g.components.city||"", colony=ac.colony||g.components.colony||"", postal=ac.postal||"";
-          const address = ($("#exShortAddr").checked?(p.shortFormattedAddress||""):(p.formattedAddress||"")) || "";
+          const address = exShort?(p.shortFormattedAddress||""):(p.formattedAddress||"");
           const lat = p.location?.latitude?.toFixed(6)||"", lng=p.location?.longitude?.toFixed(6)||"";
           const rating=p.rating??"", reviews=p.userRatingCount??"", price=exPrecio?(p.priceLevel??""):"";
           const types=exTipos? [p.primaryType,...(p.types||[])].filter(Boolean).join(" / "):"";
           const hours=exHorario? (p.currentOpeningHours?.weekdayDescriptions||[]).join(" | "):"";
           const summary=exResumen? (p.editorialSummary?.text||""):"";
-          const mapUri= exMapsUri ? (p.googleMapsUri||"") : (p.googleMapsUri||"");
+          const mapUri= p.googleMapsUri||"";
           const photo= exFoto ? (p.photos?.[0]?.name||"") : "";
-          let website = wantWebsite? "" : "";
+          // website: vendrá en otra fase si activas Places Details; por ahora puede venir vacío.
+          let website = wantWebsite ? "" : "";
+          // email sólo si hay website y no es Google:
           let email = wantEmail? await tryEmail(website, +($("#emailWait").value||10)) : "";
-          let cid=""; if(mapUri && mapUri.includes("cid=")){ const m=mapUri.match(/[?&]cid=([0-9]+)/); if(m) cid=m[1]; }
-          let partners=""; if(exPartners){ const candidate=website||mapUri; partners=await detectPartners(candidate); }
+          let cid=""; if(mapUri && mapUri.indexOf("cid=")>-1){ const m=mapUri.match(/[?&]cid=([0-9]+)/); if(m) cid=m[1]; }
+          // partners sólo si hay website (no google):
+          let partners=""; if(exPartners && website && !isGoogleHost(website)){ partners = await detectPartnersFromWebsite(website); }
 
           pushRow({
             kw, state, city, colony, name, category:cat, website, phone, email, address, postal,
             lat: wantLatLng?lat:"", lng: wantLatLng?lng:"", types, price, hours, summary, photo,
-            reviews:String(reviews), rating:String(rating), cid, map:mapUri, partners
+            reviews:String(reviews), rating:String(rating), cid, map: exMapsUri?mapUri:"", partners
           });
         }
       }
     }
     log("Proceso finalizado. Lugares únicos: "+RESULTS.length);
-  }catch(e){ log("Error general: "+e.message,"err"); }
+  }catch(e){ log("Error general: "+(e?.message||e),"err"); }
   finally{ running=false; }
 });
 
@@ -320,6 +334,7 @@ $("#btnDownload").addEventListener("click", ()=>{
   a.href=URL.createObjectURL(blob); a.download="places.csv"; document.body.appendChild(a); a.click(); a.remove();
 });
 
+// tecla rápida: Cmd/Ctrl + Enter
 ["kw","cities","states","colonies","zips"].forEach(id=>{
   $("#"+id).addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)) $("#btnStart").click(); });
 });
