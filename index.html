@@ -4,22 +4,28 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Scrapping Tool — Google Maps Places</title>
-<meta name="build" content="build-2025-08-29-3" />
+<meta name="build" content="build-2025-08-29-4" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Ccircle cx='64' cy='64' r='64' fill='%2322c55e'/%3E%3Cpath d='M64 20c-18 0-32 14-32 32 0 17 26 46 30 50 2 2 5 2 6 0 4-4 30-33 30-50 0-18-14-32-34-32zm0 48a16 16 0 1 1 0-32 16 16 0 0 1 0 32z' fill='%23fff'/%3E%3C/svg%3E" />
 <style>
   :root{--bg:#0b0e11;--panel:#11161b;--muted:#88919c;--txt:#e6eef6;--brand:#22c55e;--border:#1f2937;--chip:#1b2330}
-  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial,'Noto Sans',sans-serif}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial,'Noto Sans',sans-serif}
   .wrap{max-width:1360px;margin:0 auto;padding:16px}
-  h1{margin:0 0 6px;font-size:22px}.subtitle{color:var(--muted);margin-bottom:12px}
+  h1{margin:0 0 6px;font-size:22px}
+  .subtitle{color:var(--muted);margin-bottom:12px}
   .toolbar{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;align-items:end;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px}
-  .field{display:flex;flex-direction:column;gap:6px}.field label{font-size:12px;color:var(--muted)}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:12px;color:var(--muted)}
   textarea,input[type="text"],input[type="number"]{background:#0e141a;border:1px solid var(--border);color:var(--txt);border-radius:10px;padding:10px 12px;font-size:14px;outline:none}
   textarea{resize:vertical;min-height:40px;max-height:140px}
-  .chips{display:flex;gap:10px;flex-wrap:wrap}.chip{display:flex;align-items:center;gap:8px;background:var(--chip);border:1px solid var(--border);padding:8px 10px;border-radius:999px;font-size:13px}
-  .actions{display:flex;gap:10px;justify-content:flex-end}.btn{appearance:none;border:none;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer}
-  .btn-primary{background:var(--brand);color:#071307}.btn-ghost{background:#0f151b;color:var(--txt);border:1px solid var(--border)}
+  .chips{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{display:flex;align-items:center;gap:8px;background:var(--chip);border:1px solid var(--border);padding:8px 10px;border-radius:999px;font-size:13px}
+  .actions{display:flex;gap:10px;justify-content:flex-end}
+  .btn{appearance:none;border:none;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer}
+  .btn-primary{background:var(--brand);color:#071307}
+  .btn-ghost{background:#0f151b;color:var(--txt);border:1px solid var(--border)}
   .badge{display:inline-flex;align-items:center;gap:8px;background:#0f151b;border:1px dashed var(--border);padding:8px 10px;border-radius:10px;color:var(--muted);font-size:13px}
-  .console{margin-top:12px;background:#0f1419;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:#aab4bf;white-space:pre-wrap}
+  .console{margin-top:12px;background:#0f1419;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:#aab4bf;white-space:pre-wrap}
   .table-wrap{margin-top:14px;background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:auto}
   table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
   thead th{position:sticky;top:0;background:#0f151b;color:#cbd5e1;font-weight:600;font-size:13px;padding:10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
@@ -117,7 +123,6 @@
 const BUILD = document.querySelector('meta[name="build"]').content;
 document.getElementById('build').textContent = BUILD;
 
-// helpers
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const log = (m, cls="")=>{
@@ -182,7 +187,7 @@ async function textSearchAll(key, body){
       "places.location","places.plusCode",
       "places.nationalPhoneNumber","places.internationalPhoneNumber",
       "places.rating","places.userRatingCount","places.priceLevel",
-      "places.googleMapsUri",
+      "places.googleMapsUri","places.websiteUri",
       "places.currentOpeningHours.weekdayDescriptions",
       "places.editorialSummary.text","places.photos.name","nextPageToken"
     ].join(",")
@@ -200,12 +205,11 @@ async function textSearchAll(key, body){
   return out;
 }
 
-// === Partners (solo usando website NO-Google) ===
+// Partners & Email
 const isGoogleHost = u => /(^|\.)google\.(com|[a-z.]+)\/?/i.test(u||"") || /(^|\.)g\.page/i.test(u||"") || /(^|\.)goo\.gl/i.test(u||"");
 async function detectPartnersFromWebsite(website){
   const w=(website||"").trim();
-  if(!w) return "";
-  if(isGoogleHost(w)) return "";
+  if(!w || isGoogleHost(w)) return "";
   try{
     const url="https://r.jina.ai/http/"+w.replace(/^https?:\/\//,"");
     const r=await fetch(url,{cache:"no-store"});
@@ -222,12 +226,9 @@ async function detectPartnersFromWebsite(website){
     return [...new Set(hits)].join(", ");
   }catch(_){return"";}
 }
-
-// === Email (sólo si website y NO google) ===
 async function tryEmail(website, waitSec){
   const w=(website||"").trim(); if(!w || isGoogleHost(w)) return "";
-  const ctrl=new AbortController();
-  const to=setTimeout(()=>ctrl.abort(), Math.max(0,waitSec|0)*1000);
+  const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(), Math.max(0,waitSec|0)*1000);
   try{
     const r=await fetch("https://r.jina.ai/http/"+w.replace(/^https?:\/\//,""),{signal:ctrl.signal,cache:"no-store"});
     if(!r.ok) return "";
@@ -254,7 +255,6 @@ $("#btnStart").addEventListener("click", async ()=>{
 
     const radiusKm=+($("#radiusKm").value||3), radiusM=Math.max(1,radiusKm)*1000;
     const wantLatLng=$("#wantLatLng").checked, wantWebsite=$("#wantWebsite").checked, wantEmail=$("#wantEmail").checked;
-
     const exHorario=$("#exHorario").checked, exPrecio=$("#exPrecio").checked, exMapsUri=$("#exMapsUri").checked, exFoto=$("#exFoto").checked, exTipos=$("#exTipos").checked, exShort=$("#exShortAddr").checked, exResumen=$("#exResumen").checked, exPartners=$("#exPartners").checked;
 
     const KW=$("#kw").value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
@@ -302,13 +302,10 @@ $("#btnStart").addEventListener("click", async ()=>{
           const hours=exHorario? (p.currentOpeningHours?.weekdayDescriptions||[]).join(" | "):"";
           const summary=exResumen? (p.editorialSummary?.text||""):"";
           const mapUri= p.googleMapsUri||"";
+          const website = wantWebsite ? (p.websiteUri||"") : "";
           const photo= exFoto ? (p.photos?.[0]?.name||"") : "";
-          // website: vendrá en otra fase si activas Places Details; por ahora puede venir vacío.
-          let website = wantWebsite ? "" : "";
-          // email sólo si hay website y no es Google:
           let email = wantEmail? await tryEmail(website, +($("#emailWait").value||10)) : "";
           let cid=""; if(mapUri && mapUri.indexOf("cid=")>-1){ const m=mapUri.match(/[?&]cid=([0-9]+)/); if(m) cid=m[1]; }
-          // partners sólo si hay website (no google):
           let partners=""; if(exPartners && website && !isGoogleHost(website)){ partners = await detectPartnersFromWebsite(website); }
 
           pushRow({
@@ -334,7 +331,6 @@ $("#btnDownload").addEventListener("click", ()=>{
   a.href=URL.createObjectURL(blob); a.download="places.csv"; document.body.appendChild(a); a.click(); a.remove();
 });
 
-// tecla rápida: Cmd/Ctrl + Enter
 ["kw","cities","states","colonies","zips"].forEach(id=>{
   $("#"+id).addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)) $("#btnStart").click(); });
 });
