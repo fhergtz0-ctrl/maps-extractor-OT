@@ -17,7 +17,6 @@
   h1{margin:0 0 10px;font-size:22px}
   .subtitle{color:var(--muted);margin-bottom:14px}
 
-  /* Toolbar */
   .toolbar{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;align-items:end;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px}
   .field{display:flex;flex-direction:column;gap:6px}
   .field label{font-size:12px;color:var(--muted)}
@@ -33,10 +32,8 @@
   .btn-ghost{background:#0f151b;color:var(--txt);border:1px solid var(--border)}
   .badge{display:inline-flex;align-items:center;gap:8px;background:#0f151b;border:1px dashed var(--border);padding:8px 10px;border-radius:10px;color:var(--muted);font-size:13px}
 
-  /* Console */
   .console{margin-top:12px;background:#0f1419;border:1px solid var(--border);border-radius:10px;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:#aab4bf;white-space:pre-wrap}
 
-  /* Table */
   .table-wrap{margin-top:14px;background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:auto}
   table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
   thead th{position:sticky;top:0;background:#0f151b;color:#cbd5e1;font-weight:600;font-size:13px;padding:10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
@@ -46,11 +43,7 @@
   .th-mini{width:90px}
   .th-wide{width:280px}
   .nowrap{white-space:nowrap}
-  .ok{color:#22c55e}
-  .warn{color:#f59e0b}
-  .err{color:#ef4444}
 
-  /* Grid layout for the toolbar */
   .c-keywords{grid-column:span 3}
   .c-cities{grid-column:span 2}
   .c-states{grid-column:span 2}
@@ -59,7 +52,6 @@
   .c-key{grid-column:span 2}
   .c-radius{grid-column:span 1}
   .c-emailsec{grid-column:span 1}
-  .c-flags{grid-column:span 3}
   .c-extras{grid-column:span 6}
   .c-actions{grid-column:span 3;display:flex;gap:10px;align-items:center;justify-content:flex-end}
   .muted{color:var(--muted)}
@@ -68,29 +60,28 @@
 <body>
 <div class="wrap">
   <h1>Scrapping Tool — <span class="muted">Google Maps Places</span></h1>
-  <div class="subtitle">Barra única, resultados paginados por combinación y columnas separadas para Estado / Ciudad / Colonia / CP. Marca los “Campos extra” que desees.</div>
+  <div class="subtitle">Barra única con filtros, paginación por combinación (hasta 60), y columnas separadas para Estado / Ciudad / Colonia / CP.</div>
 
-  <!-- TOOLBAR -->
   <section class="toolbar">
     <div class="field c-keywords">
       <label>Keywords (uno por línea)</label>
-      <textarea id="kw" placeholder="Restaurante&#10;Tacos"></textarea>
+      <textarea id="kw" placeholder="Restaurantes&#10;Tacos"></textarea>
     </div>
     <div class="field c-cities">
       <label>Ciudad(es)</label>
-      <textarea id="cities" placeholder="Hermosillo&#10;Nogales"></textarea>
+      <textarea id="cities" placeholder="Cabo San Lucas&#10;Hermosillo"></textarea>
     </div>
     <div class="field c-states">
       <label>Estado(s)</label>
-      <textarea id="states" placeholder="Sonora"></textarea>
+      <textarea id="states" placeholder="Baja California Sur&#10;Sonora"></textarea>
     </div>
     <div class="field c-colonies">
       <label>Colonia(s) (opcional)</label>
-      <textarea id="colonies" placeholder="Centro&#10;Pitic"></textarea>
+      <textarea id="colonies" placeholder="Centro"></textarea>
     </div>
     <div class="field c-zips">
       <label>Códigos postales (opcional)</label>
-      <textarea id="zips" placeholder="83000&#10;83290"></textarea>
+      <textarea id="zips" placeholder="23450&#10;83000"></textarea>
     </div>
 
     <div class="field c-key">
@@ -105,7 +96,7 @@
 
     <div class="field c-radius">
       <label>Radio por consulta (km)</label>
-      <input id="radiusKm" type="number" min="1" max="50" value="3">
+      <input id="radiusKm" type="number" min="1" max="50" value="5">
     </div>
 
     <div class="field c-emailsec">
@@ -134,10 +125,8 @@
     </div>
   </section>
 
-  <!-- LOG -->
   <div id="log" class="console">Listo para iniciar…</div>
 
-  <!-- TABLE -->
   <div class="table-wrap">
     <table id="tbl">
       <thead>
@@ -173,9 +162,6 @@
 </div>
 
 <script>
-/* ==========================
-   Helpers UI
-========================== */
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const log = (msg, cls="")=>{
@@ -203,9 +189,6 @@ document.addEventListener("input", e=>{
   if(e.target.classList.contains("filter")) applyFilters();
 });
 
-/* ==========================
-   Core extraction logic
-========================== */
 let RESULTS = [];
 let running = false;
 let mapsLoaded = false;
@@ -245,7 +228,6 @@ function parseAddressComponents(comps){
   return out;
 }
 
-/* Places API (New) searchText paginado hasta 60 (3 páginas x 20) */
 async function textSearchAll(apiKey, body){
   const url = "https://places.googleapis.com/v1/places:searchText";
   const headers = {
@@ -267,7 +249,8 @@ async function textSearchAll(apiKey, body){
       "places.userRatingCount",
       "places.priceLevel",
       "places.googleMapsUri",
-      "places.currentOpeningHours",
+      "places.currentOpeningHours.weekdayDescriptions",
+      "places.editorialSummary.text",
       "places.photos.name",
       "nextPageToken"
     ].join(",")
@@ -287,11 +270,10 @@ async function textSearchAll(apiKey, body){
     out.push(...(j.places||[]));
     token = j.nextPageToken || null;
     page++;
-  } while(token && page < 3); // 3 páginas x 20 = 60
+  } while(token && page < 3);
   return out;
 }
 
-/* partners detector (best-effort): lee la página pública a través de r.jina.ai */
 async function detectPartners(publicOrWebsiteUrl){
   if(!publicOrWebsiteUrl) return "";
   const url = /^https?:\/\//i.test(publicOrWebsiteUrl) ? publicOrWebsiteUrl : ("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(publicOrWebsiteUrl));
@@ -309,7 +291,6 @@ async function detectPartners(publicOrWebsiteUrl){
   }catch(_){ return ""; }
 }
 
-/* email scraper (muy best-effort) */
 async function tryExtractEmail(website, waitSec){
   if(!website) return "";
   try{
@@ -333,15 +314,11 @@ function pushRow(row){
     td.textContent = row[c] || "";
     tr.appendChild(td);
   });
-  // dataset para filtros
   for(const k of cols) tr.dataset[k] = (row[k]||"").toString();
   $("#tbody").appendChild(tr);
   setFound(RESULTS.length);
 }
 
-/* ==========================
-   Start
-========================== */
 $("#btnStart").addEventListener("click", async ()=>{
   if(running) return;
   RESULTS = []; $("#tbody").innerHTML=""; setFound(0);
@@ -353,12 +330,10 @@ $("#btnStart").addEventListener("click", async ()=>{
     if(!key){ running=false; return log("Coloca tu API Key", "err"); }
     await loadMaps(key);
 
-    // entradas
     const radiusKm   = parseFloat($("#radiusKm").value)||3;
     const radiusM    = Math.max(1, radiusKm)*1000;
     const waitMail   = parseInt($("#emailWait").value)||10;
 
-    // toggles
     const wantLatLng = $("#wantLatLng").checked;
     const wantWebsite= $("#wantWebsite").checked;
     const wantEmail  = $("#wantEmail").checked;
@@ -383,7 +358,6 @@ $("#btnStart").addEventListener("click", async ()=>{
       return log("Pon al menos una Keyword y una Ciudad (o un CP).", "err");
     }
 
-    // genera combinaciones de ubicaciones: CPs directos + combinaciones ciudad/estado/colonia
     const combos = [];
     ZIPS.forEach(cp => combos.push({label:`CP: ${cp}`, geostr:`${cp}`}));
     if(CITS.length){
@@ -405,12 +379,12 @@ $("#btnStart").addEventListener("click", async ()=>{
     for(let ci=0; ci<combos.length; ci++){
       const { label, geostr } = combos[ci];
 
-      // geocodificar
-      let center = null, components=null;
+      let centerLL = null, components=null;
       try{
         const g = await geocodeOne(geostr);
         if(!g){ log(`No se pudo geocodificar: ${geostr}`,"warn"); continue; }
-        center = { lat: g.lat, lng: g.lng };
+        // *** FIX: Places v1 requiere latitude/longitude ***
+        centerLL = { latitude: g.lat, longitude: g.lng };
         components = g.components;
       }catch(e){
         log(`Error geocodificando ${geostr}: ${e.message}`, "err");
@@ -420,12 +394,11 @@ $("#btnStart").addEventListener("click", async ()=>{
       for(const kw of KW){
         log(`Buscando "${kw}" @ "${label}" (radio ${radiusKm} km)…`);
 
-        // Places searchText con bias circular
         const body = {
           textQuery: `${kw}`,
           pageSize : 20,
           locationBias: {
-            circle: { center, radius: radiusM }
+            circle: { center: centerLL, radius: radiusM }
           }
         };
 
@@ -437,13 +410,11 @@ $("#btnStart").addEventListener("click", async ()=>{
           continue;
         }
 
-        // procesar resultados
         for(const p of places){
           const name = p.displayName?.text || "";
           const phone = p.nationalPhoneNumber || p.internationalPhoneNumber || "";
           const cat = p.primaryType || (p.types||[]).join(", ");
 
-          // Address components -> separar state/city/colony/postal
           const ac = parseAddressComponents(p.addressComponents||[]);
           const state = ac.state || components?.state || "";
           const city  = ac.city  || components?.city  || "";
@@ -451,8 +422,8 @@ $("#btnStart").addEventListener("click", async ()=>{
           const postal= ac.postal|| "";
 
           const address = (exShort ? (p.shortFormattedAddress||"") : (p.formattedAddress||"")) || "";
-          const lat = p.location?.latitude?.toFixed(6) || p.location?.lat?.toFixed?.(6) || "";
-          const lng = p.location?.longitude?.toFixed(6) || p.location?.lng?.toFixed?.(6) || "";
+          const lat = p.location?.latitude?.toFixed(6) || "";
+          const lng = p.location?.longitude?.toFixed(6) || "";
 
           const rating  = p.rating ?? "";
           const reviews = p.userRatingCount ?? "";
@@ -464,22 +435,17 @@ $("#btnStart").addEventListener("click", async ()=>{
           const summary = exResumen ? (p.editorialSummary?.text || "") : "";
           const mapUri  = exMapsUri ? (p.googleMapsUri||"") : (p.googleMapsUri||"");
 
-          // Foto (solo el "name" del asset)
           const photo   = exFoto ? (p.photos?.[0]?.name || "") : "";
 
-          // website: NO llega en v1; a veces viene en Details. Haremos best-effort = vacío (o el mismo mapsUri)
           let website = wantWebsite ? "" : "";
-          // email best-effort
           let email = wantEmail ? await tryExtractEmail(website, parseInt($("#emailWait").value)||10) : "";
 
-          // CID (puede no venir; intentamos extraer de googleMapsUri si aparece)
           let cid = "";
           if(mapUri && mapUri.includes("cid=")){
             const m = mapUri.match(/[?&]cid=([0-9]+)/);
             if(m) cid = m[1];
           }
 
-          // Partners
           let partners = "";
           if(exPartners){
             const candidate = website || mapUri;
@@ -521,9 +487,6 @@ $("#btnStart").addEventListener("click", async ()=>{
   }
 });
 
-/* ==========================
-   CSV Download
-========================== */
 $("#btnDownload").addEventListener("click", ()=>{
   if(!RESULTS.length){ return log("No hay datos para descargar.", "warn"); }
   const cols = ["kw","state","city","colony","name","category","website","phone","email","address","postal","lat","lng","types","price","hours","summary","photo","reviews","rating","cid","map","partners"];
@@ -539,9 +502,6 @@ $("#btnDownload").addEventListener("click", ()=>{
   a.remove();
 });
 
-/* ==========================
-   UX touch
-========================== */
 ["kw","cities","states","colonies","zips"].forEach(id=>{
   $("#"+id).addEventListener("keydown", e=>{
     if(e.key==="Enter" && (e.metaKey||e.ctrlKey)){ $("#btnStart").click(); }
