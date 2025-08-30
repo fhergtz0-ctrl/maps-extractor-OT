@@ -21,7 +21,6 @@
     gap:10px; align-items:center; background:var(--panel); padding:12px; border-radius:14px; border:1px solid var(--border);
   }
   .toolbar label{font-size:12px; color:var(--muted); display:block; margin-bottom:4px;}
-  .toolbar .group{display:flex; gap:10px; align-items:center;}
   textarea, input[type="text"], input[type="number"]{
     width:100%; background:#0c1020; color:var(--text); border:1px solid var(--border);
     border-radius:10px; padding:10px 12px; outline:none;
@@ -48,7 +47,6 @@
   tr:last-child td{border-bottom:none}
   .pill{display:inline-block; padding:4px 8px; border-radius:999px; background:var(--pill); border:1px solid var(--border); color:var(--muted); font-size:12px}
   .count{display:inline-grid; place-items:center; width:32px; height:32px; border-radius:8px; background:#0b1322; border:1px solid var(--border); font-weight:700}
-  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
   .small{width:80px}
   .fit{width:120px}
   .w-160{width:160px}
@@ -151,17 +149,28 @@ detectCountry();
 
 /* =============== Detección Reservas/Delivery =============== */
 const PARTNER_DOMAINS = [
-  // Reservas
+  // dominios
   { key:'OpenTable', type:'reservation', host:'opentable.' },
-  // Delivery
-  { key:'UberEats',  type:'delivery', host:'ubereats.' },
-  { key:'Rappi',     type:'delivery', host:'rappi.' },
-  { key:'DiDi Food', type:'delivery', host:'didi-food.' },
-  { key:'DoorDash',  type:'delivery', host:'doordash.' },
-  { key:'PedidosYa', type:'delivery', host:'pedidosya.' },
-  { key:'Just Eat',  type:'delivery', host:'just-eat.' },
-  { key:'Glovo',     type:'delivery', host:'glovo.' },
+  { key:'UberEats',  type:'delivery',   host:'ubereats.' },
+  { key:'Rappi',     type:'delivery',   host:'rappi.' },
+  { key:'DiDi Food', type:'delivery',   host:'didi-food.' },
+  { key:'DoorDash',  type:'delivery',   host:'doordash.' },
+  { key:'PedidosYa', type:'delivery',   host:'pedidosya.' },
+  { key:'Just Eat',  type:'delivery',   host:'just-eat.' },
+  { key:'Glovo',     type:'delivery',   host:'glovo.' },
   { key:'SinDelantal', type:'delivery', host:'sindelantal.' }
+];
+const PARTNER_KEYWORDS = [
+  // palabras clave por si no aparece el dominio pero sí el nombre
+  { key:'OpenTable', type:'reservation', kw:'opentable' },
+  { key:'UberEats',  type:'delivery',    kw:'uber eats' },
+  { key:'Rappi',     type:'delivery',    kw:'rappi' },
+  { key:'DiDi Food', type:'delivery',    kw:'didi food' },
+  { key:'DoorDash',  type:'delivery',    kw:'doordash' },
+  { key:'PedidosYa', type:'delivery',    kw:'pedidos ya' },
+  { key:'Just Eat',  type:'delivery',    kw:'just eat' },
+  { key:'Glovo',     type:'delivery',    kw:'glovo' },
+  { key:'SinDelantal', type:'delivery',  kw:'sin delantal' }
 ];
 
 function normalizeUrl(u){
@@ -170,26 +179,34 @@ function normalizeUrl(u){
   if(!/^https?:\/\//i.test(out)) out = 'https://' + out;
   return out;
 }
-async function fetchWithTimeout(url, {timeout=8000}={}){
+async function fetchWithTimeout(url, {timeout=8000, mode='cors'}={}){
   const ctrl = new AbortController();
   const t = setTimeout(()=>ctrl.abort(), timeout);
   try{
-    const r = await fetch(url, {signal:ctrl.signal, mode:'cors'});
+    const r = await fetch(url, {signal:ctrl.signal, mode});
     clearTimeout(t);
+    if(!r.ok) throw new Error('HTTP '+r.status);
     return await r.text();
   }catch{
     clearTimeout(t);
     return '';
   }
 }
-function detectPartnersFromHTML(html=''){
+async function fetchReadableProxy(url){
+  // usa https://r.jina.ai/ para obtener contenido legible sin CORS
+  const u = new URL(normalizeUrl(url));
+  const prox = `https://r.jina.ai/${u.protocol}//${u.host}${u.pathname}${u.search||''}`;
+  return await fetchWithTimeout(prox, {timeout:8000, mode:'cors'});
+}
+function detectPartnersFromText(text=''){
+  const t = text.toLowerCase();
   const reservation = new Set();
   const delivery = new Set();
   for(const p of PARTNER_DOMAINS){
-    if(html.includes(p.host)){
-      if(p.type==='reservation') reservation.add(p.key);
-      if(p.type==='delivery')    delivery.add(p.key);
-    }
+    if(t.includes(p.host)) (p.type==='reservation'?reservation:delivery).add(p.key);
+  }
+  for(const p of PARTNER_KEYWORDS){
+    if(t.includes(p.kw)) (p.type==='reservation'?reservation:delivery).add(p.key);
   }
   return {
     reservationProvider: Array.from(reservation).join(', '),
@@ -199,9 +216,16 @@ function detectPartnersFromHTML(html=''){
 async function detectReservationDelivery(websiteUrl){
   const url = normalizeUrl(websiteUrl);
   if(!url) return {reservationProvider:'', deliveryProviders:''};
-  const html = await fetchWithTimeout(url,{timeout:8000});
-  if(!html) return {reservationProvider:'', deliveryProviders:''};
-  return detectPartnersFromHTML(html);
+
+  // 1) intento directo (si el sitio permite CORS)
+  let html = await fetchWithTimeout(url,{timeout:7000, mode:'cors'});
+  let text = html ? html : '';
+  // 2) fallback sin CORS (texto legible)
+  if(!text){
+    text = await fetchReadableProxy(url);
+  }
+  if(!text) return {reservationProvider:'', deliveryProviders:''};
+  return detectPartnersFromText(text);
 }
 
 /* =============== Places API (v1) helpers =============== */
@@ -218,12 +242,8 @@ function fieldMaskCore(){
 }
 
 async function geocodeCenterByText(apiKey, locationText){
-  // Usa el propio searchText para obtener un centro aproximado
   const url = 'https://places.googleapis.com/v1/places:searchText';
-  const body = {
-    textQuery: locationText,
-    maxResultCount: 1
-  };
+  const body = { textQuery: locationText, maxResultCount: 1 };
   const resp = await fetch(url,{
     method:'POST',
     headers:{
@@ -240,7 +260,6 @@ async function geocodeCenterByText(apiKey, locationText){
 }
 
 async function textSearchAll(apiKey, keyword, center, radiusMeters){
-  // Pagina hasta agotar nextPageToken
   const results = [];
   let pageToken = null;
   const mask = fieldMaskCore();
@@ -250,9 +269,7 @@ async function textSearchAll(apiKey, keyword, center, radiusMeters){
     const req = {
       textQuery: keyword,
       pageSize: 20,
-      locationBias: {
-        circle: { center, radius: radiusMeters }
-      }
+      locationBias: { circle: { center, radius: radiusMeters } }
     };
     if(pageToken) req.pageToken = pageToken;
 
@@ -272,8 +289,6 @@ async function textSearchAll(apiKey, keyword, center, radiusMeters){
     const data = await resp.json();
     if(Array.isArray(data.places)) results.push(...data.places);
     pageToken = data.nextPageToken || null;
-
-    // Google requiere pequeño delay entre páginas
     if(pageToken) await new Promise(r=>setTimeout(r, 1200));
   }while(pageToken);
 
@@ -284,7 +299,6 @@ function acGet(component, type){
   return (component || []).find(c => c.types?.includes(type))?.longText || '';
 }
 function parseAddressComponents(ac){
-  // Tipos comunes en Places v1
   const state   = acGet(ac, 'administrative_area_level_1') || acGet(ac,'region');
   const city    = acGet(ac, 'locality') || acGet(ac,'postal_town') || acGet(ac,'subadministrative_area_level_1');
   const colony  = acGet(ac, 'sublocality') || acGet(ac,'neighborhood') || acGet(ac,'ward');
@@ -303,7 +317,9 @@ function extractEmailFromHTML(html){
 async function detectEmail(websiteUrl, maxSecs){
   const url = normalizeUrl(websiteUrl);
   if(!url) return '';
-  const html = await fetchWithTimeout(url,{timeout:Math.max(3000, maxSecs*1000)});
+  // si CORS falla, también probamos por el proxy de texto
+  let html = await fetchWithTimeout(url,{timeout:Math.max(3000, maxSecs*1000)});
+  if(!html) html = await fetchReadableProxy(url);
   return extractEmailFromHTML(html);
 }
 
@@ -395,7 +411,7 @@ $('#btnStart').addEventListener('click', async ()=>{
   rows.length = 0; tbody.innerHTML=''; setFound(0);
   logBox.textContent = 'Iniciando…';
 
-  const seen = new Set(); // para evitar duplicados por place.id
+  const seen = new Set();
 
   for(const locText of locs){
     log(`Geolocalizando centro: ${locText} …`);
@@ -439,7 +455,6 @@ $('#btnStart').addEventListener('click', async ()=>{
           reviews: p.userRatingCount ?? ''
         };
 
-        // Website/email/partners si está activo y hay website
         if(tgWebsite && row.website){
           if(tgEmail){
             row.email = await detectEmail(row.website, emailSecs);
@@ -449,16 +464,16 @@ $('#btnStart').addEventListener('click', async ()=>{
               const partners = await detectReservationDelivery(row.website);
               row.reservationProvider = partners.reservationProvider || '';
               row.deliveryProviders   = partners.deliveryProviders   || '';
-            }catch{ /* silencioso */ }
+            }catch{/* noop */}
           }
         }
 
         rows.push(row);
         renderRow(row);
         setFound(rows.length);
-      } // end for places
-    } // end for kw
-  } // end for locs
+      }
+    }
+  }
 
   log(`Proceso finalizado. Lugares únicos: ${rows.length}.`);
 });
