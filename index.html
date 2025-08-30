@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Scrapping Tool — Google Maps Places</title>
 
-  <!-- Estilos propios -->
   <link rel="stylesheet" href="/assets/css/scrapping-tool.css">
   <link rel="stylesheet" media="print" href="/assets/css/print.css">
 
@@ -34,7 +33,6 @@
     .btn{border-radius:10px;border:1px solid var(--border);background:#212a3a;color:var(--text);padding:10px 14px;cursor:pointer}
     .btn.primary{background:var(--accent);border-color:#0f7a33;color:#07190f}
     .btn.ghost{background:#1b2331}
-    .muted{color:var(--muted);font-size:12px}
     .metric{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:6px 10px;background:var(--chip)}
     .log{background:#0b0e13;border:1px dashed var(--border);border-radius:10px;padding:12px;font-family:ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;max-height:180px;overflow:auto}
     table{width:100%;border-collapse:separate;border-spacing:0 8px}
@@ -42,14 +40,13 @@
     tbody tr{background:#121621;border:1px solid var(--border);border-radius:10px}
     tbody td{padding:10px}
     .scroll-x{overflow:auto}
-    .warning{color:var(--danger)}
   </style>
 </head>
 <body>
   <div class="container">
 
     <div class="h1">Scrapping Tool — Google Maps Places</div>
-    <div class="sub">Barra única, resultados paginados; columnas separadas para Estado / Ciudad / Colonia / CP. Marca los “Campos extra”.</div>
+    <div class="sub">Barra única; resultados paginados; columnas separadas para Estado / Ciudad / Colonia / CP. Marca los “Campos extra”.</div>
 
     <!-- Controles -->
     <div class="panel" id="controls">
@@ -168,120 +165,84 @@
       </table>
     </div>
 
-    <div class="muted">
-      Origen: esta página — sin backend — usa Google Geocoding y Places v1 (New).  
-      Si falla geocodificado en “colonia”, probamos ciudad+estado y después solo ciudad.  
-      Si escribes CP, se usa como *bias* del radio.
+    <div class="sub">
+      Origen: esta página — sin backend — usa Google Geocoding (Maps JS) y Places v1 (New). Si falla colonia, probamos ciudad+estado y después solo ciudad. Si pones CP, se usa como bias de radio.
     </div>
 
   </div>
 
-  <!-- =============== LÓGICA =============== -->
   <script>
-    /****************  UTIL  *****************/
-    const $ = (sel) => document.querySelector(sel);
-    const logEl = $("#log");
-    const tbody = $("#tbody");
-    const resCountEl = $("#resCount");
+    /* -------- util -------- */
+    const $ = (s)=>document.querySelector(s);
+    const logEl=$("#log"), tbody=$("#tbody"), resCountEl=$("#resCount");
+    const rowsData=[];
 
     function log(msg, type="info"){
-      const prefix = (type==="warn") ? "⚠️ " : (type==="err") ? "❌ " : "";
-      logEl.textContent += (logEl.textContent ? "\n" : "") + prefix + msg;
+      const prefix= type==="warn"?"⚠️ ": type==="err"?"❌ ":"";
+      logEl.textContent += (logEl.textContent? "\n":"") + prefix + msg;
       logEl.scrollTop = logEl.scrollHeight;
     }
-    function clearLog(){ logEl.textContent=""; }
-
-    function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+    const clearLog=()=>{logEl.textContent="";};
+    const delay=(ms)=>new Promise(r=>setTimeout(r,ms));
+    const header=()=>Array.from(document.querySelectorAll("#tbl thead th")).map(th=>th.textContent);
 
     function toCSV(rows){
-      const header = Array.from(document.querySelectorAll("#tbl thead th")).map(th=>th.textContent);
-      const csv = [header.join(",")];
-      for (const r of rows){
-        csv.push(header.map(h=>{
-          const v = (r[h] ?? "").toString().replaceAll('"','""');
-          return `"${v}"`;
-        }).join(","));
+      const h=header(); const out=[h.join(",")];
+      for(const r of rows){
+        out.push(h.map(k=>`"${(r[k]??"").toString().replaceAll('"','""')}"`).join(","));
       }
-      return csv.join("\n");
+      return out.join("\n");
     }
-    function downloadCSV(filename, text){
-      const blob = new Blob([text], {type:"text/csv;charset=utf-8"});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = filename; a.click();
-      URL.revokeObjectURL(url);
+    function downloadCSV(name, text){
+      const url=URL.createObjectURL(new Blob([text],{type:"text/csv;charset=utf-8"}));
+      const a=document.createElement("a"); a.href=url; a.download=name; a.click(); URL.revokeObjectURL(url);
     }
 
-    /************  MÉTRICAS (opcionales)  *************/
-    async function safeFetchJson(u, opt){ try{ const r=await fetch(u,opt); return await r.json(); }catch{ return null; } }
+    async function safeJson(u){ try{ const r=await fetch(u); return await r.json(); }catch{return null;} }
     async function updateMetrics(){
-      // IP país
-      const ip = await safeFetchJson("https://ipapi.co/json/");
-      $("#mCountry").textContent = ip?.country_name ? `${ip.country_name} (${ip.country})` : "—";
-      // Visitas / runs (CountAPI soporta CORS pero a veces lo bloquea el DNS local)
-      const ns = "maps-extractor-ot.vercel.app";
-      const v1 = await safeFetchJson(`https://api.countapi.xyz/hit/${ns}/pageviews`);
-      const v2 = await safeFetchJson(`https://api.countapi.xyz/hit/${ns}/runs`);
+      const ip=await safeJson("https://ipapi.co/json/"); $("#mCountry").textContent = ip?.country_name?`${ip.country_name} (${ip.country})`:"—";
+      const ns="maps-extractor-ot.vercel.app";
+      const v1=await safeJson(`https://api.countapi.xyz/hit/${ns}/pageviews`);
+      const v2=await safeJson(`https://api.countapi.xyz/hit/${ns}/runs`);
       $("#mVisits").textContent = v1?.value ?? "—";
-      $("#mRuns").textContent = v2?.value ?? "—";
+      $("#mRuns").textContent   = v2?.value ?? "—";
     }
 
-    /***********  CARGA MAPS JS DINÁMICO  ************/
-    let currentMapsKey = null;
-    let mapsReady = false;
+    /* ---- carga Maps JS Dinámica (Geocoder) ---- */
+    let currentKey=null, mapsReady=false;
     function loadMapsScript(key){
       return new Promise((resolve,reject)=>{
-        if (mapsReady && currentMapsKey===key) return resolve();
-        currentMapsKey = key;
-        // Si ya hay un script previo, no lo duplicamos
-        if (document.querySelector("#gmaps-script")) {
-          // Forzamos recarga cambiando src si cambió la key
-          const s = document.querySelector("#gmaps-script");
-          if (!s.src.includes(key)) s.remove();
-          else return resolve();
-        }
-
-        const s = document.createElement("script");
-        s.id="gmaps-script";
-        s.async = true; s.defer = true;
-        s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&v=weekly`;
-        s.onload = ()=>{ mapsReady = true; resolve(); };
-        s.onerror = ()=>reject(new Error("No se pudo cargar Google Maps JS"));
+        if(mapsReady && currentKey===key) return resolve();
+        currentKey=key;
+        const prev=document.querySelector("#gmaps-script");
+        if(prev){ if(!prev.src.includes(key)) prev.remove(); else return resolve(); }
+        const s=document.createElement("script");
+        s.id="gmaps-script"; s.async=true; s.defer=true;
+        s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&v=weekly`;
+        s.onload=()=>{mapsReady=true; resolve();};
+        s.onerror=()=>reject(new Error("No se pudo cargar Google Maps JS"));
         document.head.appendChild(s);
       });
     }
 
-    /***************  GEOCODER (JS)  *****************/
-    function pickComp(components, type) {
-      const c = components?.find(x => x.types?.includes(type));
-      return c ? c.long_name : "";
-    }
+    /* -------- geocoder -------- */
+    function pickComp(comps, type){ const c=comps?.find(x=>x.types?.includes(type)); return c?c.long_name:""; }
 
-    function geocodeWithMapsJS(query, components = {}) {
-      return new Promise((resolve) => {
-        if (!window.google || !google.maps?.Geocoder) return resolve(null);
-        const geocoder = new google.maps.Geocoder();
-        const req = { address: query };
-        if (components.country) req.componentRestrictions = { country: components.country };
-        if (components.administrativeArea) {
-          req.componentRestrictions = req.componentRestrictions || {};
-          req.componentRestrictions.administrativeArea = components.administrativeArea;
-        }
-        if (components.locality) {
-          req.componentRestrictions = req.componentRestrictions || {};
-          req.componentRestrictions.locality = components.locality;
-        }
-        if (components.postalCode) {
-          req.componentRestrictions = req.componentRestrictions || {};
-          req.componentRestrictions.postalCode = components.postalCode;
-        }
-        geocoder.geocode(req, (results, status) => {
-          if (status === "OK" && results && results[0]) {
-            const r = results[0];
-            const loc = r.geometry.location;
+    function geocodeWithMapsJS(query, components={}){
+      return new Promise((resolve)=>{
+        if(!window.google || !google.maps?.Geocoder) return resolve(null);
+        const geocoder=new google.maps.Geocoder();
+        const req={ address: query };
+        if(components.country) { req.componentRestrictions = {country: components.country}; }
+        if(components.administrativeArea){ req.componentRestrictions.administrativeArea = components.administrativeArea; }
+        if(components.locality){ req.componentRestrictions.locality = components.locality; }
+        if(components.postalCode){ req.componentRestrictions.postalCode = components.postalCode; }
+        geocoder.geocode(req,(results,status)=>{
+          if(status==="OK" && results && results[0]){
+            const r=results[0], loc=r.geometry.location;
             resolve({
               lat: loc.lat(), lng: loc.lng(),
-              viewport: r.geometry.viewport || null,
+              viewport: r.geometry.viewport||null,
               components: r.address_components,
               formatted: r.formatted_address
             });
@@ -290,33 +251,18 @@
       });
     }
 
-    async function geocodeSmart({ colonia, ciudad, estado, cp, country = "MX" }) {
-      const combos = [];
-      // Si hay CP primero
-      if (cp) combos.push({
-        q: `${cp}, ${ciudad||""}, ${estado||""}, ${country}`,
-        comp: { country, administrativeArea: estado, locality: ciudad, postalCode: cp }
-      });
-      if (colonia) combos.push({
-        q: `${colonia}, ${ciudad||""}, ${estado||""}, ${country}`,
-        comp: { country, administrativeArea: estado, locality: ciudad }
-      });
-      if (ciudad && estado) combos.push({
-        q: `${ciudad}, ${estado}, ${country}`,
-        comp: { country, administrativeArea: estado, locality: ciudad }
-      });
-      if (ciudad) combos.push({
-        q: `${ciudad}, ${country}`,
-        comp: { country, locality: ciudad }
-      });
-
-      for (const c of combos){
-        const hit = await geocodeWithMapsJS(c.q, c.comp);
-        if (hit){
-          const comps = hit.components || [];
+    async function geocodeSmart({ colonia, ciudad, estado, cp, country="MX"}){
+      const combos=[];
+      if(cp) combos.push({ q:`${cp}, ${ciudad||""}, ${estado||""}, ${country}`, comp:{country, administrativeArea:estado, locality:ciudad, postalCode:cp}});
+      if(colonia) combos.push({ q:`${colonia}, ${ciudad||""}, ${estado||""}, ${country}`, comp:{country, administrativeArea:estado, locality:ciudad}});
+      if(ciudad && estado) combos.push({ q:`${ciudad}, ${estado}, ${country}`, comp:{country, administrativeArea:estado, locality:ciudad}});
+      if(ciudad) combos.push({ q:`${ciudad}, ${country}`, comp:{country, locality:ciudad}});
+      for(const c of combos){
+        const hit=await geocodeWithMapsJS(c.q, c.comp);
+        if(hit){
+          const comps=hit.components||[];
           return {
-            ok: true,
-            lat: hit.lat, lng: hit.lng, viewport: hit.viewport,
+            ok:true, lat:hit.lat, lng:hit.lng, viewport:hit.viewport,
             state: pickComp(comps,"administrative_area_level_1"),
             city:  pickComp(comps,"locality") || pickComp(comps,"sublocality") || pickComp(comps,"administrative_area_level_2"),
             colony:pickComp(comps,"neighborhood") || pickComp(comps,"sublocality_level_1") || pickComp(comps,"sublocality"),
@@ -325,12 +271,11 @@
           };
         }
       }
-      return { ok:false };
+      return {ok:false};
     }
 
-    /***************  PLACES (NEW)  ******************/
-    // Campos válidos en v1 (evitamos el error de subtypes):
-    const BASE_FIELDS = [
+    /* -------- Places v1 (New) -------- */
+    const BASE_FIELDS=[
       "places.id","places.displayName","places.primaryType","places.types",
       "places.formattedAddress","places.shortFormattedAddress",
       "places.addressComponents","places.location",
@@ -340,197 +285,144 @@
       "places.editorialSummary","places.photos.name"
     ];
 
-    async function textSearchAll({ apiKey, textQuery, bias, pageLimit=50, pageSize=20 }) {
-      const rows = [];
-      let nextPageToken = null;
-      let page = 0;
-      do {
+    async function textSearchAll({apiKey,textQuery,bias,pageLimit=50,pageSize=20}){
+      const out=[]; let page=0, nextPageToken=null;
+      do{
         page++;
-        const body = {
-          textQuery,
-          pageSize,
-          languageCode: "es",
-          includedType: undefined, // opcional
-          locationBias: bias || undefined
-        };
-        if (nextPageToken) body.pageToken = nextPageToken;
-
-        const resp = await fetch("https://places.googleapis.com/v1/places:searchText", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json; charset=utf-8",
+        const body={ textQuery, pageSize, languageCode:"es", locationBias: bias||undefined };
+        if(nextPageToken) body.pageToken = nextPageToken;
+        const r=await fetch("https://places.googleapis.com/v1/places:searchText",{
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json; charset=utf-8",
             "X-Goog-Api-Key": apiKey,
-            // CAMPO IMPORTANTÍSIMO: evita el error de subfields
             "X-Goog-FieldMask": BASE_FIELDS.join(",")
           },
           body: JSON.stringify(body)
         });
-        if (!resp.ok) {
-          const t = await resp.text();
-          throw new Error(`HTTP ${resp.status} en searchText: ${t}`);
-        }
-        const data = await resp.json();
-        (data.places || []).forEach(p=> rows.push(p));
-        nextPageToken = data.nextPageToken || null;
-
-        // Para tokens a veces hay que esperar unos ms
-        if (nextPageToken) await delay(500);
-      } while (nextPageToken && page < pageLimit);
-
-      return rows;
+        if(!r.ok){ throw new Error(`HTTP ${r.status} en searchText: ${await r.text()}`); }
+        const data=await r.json();
+        (data.places||[]).forEach(p=>out.push(p));
+        nextPageToken=data.nextPageToken||null;
+        if(nextPageToken) await delay(500);
+      }while(nextPageToken && page<pageLimit);
+      return out;
     }
 
-    /**********  DETECCIÓN PARTNERS SIMPLE  **********/
     function detectPartners(p){
-      const out = [];
-      const uri = (p.googleMapsUri || "").toLowerCase();
-      const summary = (p.editorialSummary?.text || "").toLowerCase();
-      const sites = [
-        "opentable","restorando","rappi","ubereats","didi food","didifood","doordash","justeat","seamless","postmates"
-      ];
-      const hit = sites.find(s=>{
-        return uri.includes(s) || summary.includes(s);
-      });
-      if (hit) out.push(hit);
-      // heurística: si weekdayDescriptions tiene "a domicilio" o "entrega"
-      if (summary.includes("delivery") || summary.includes("domicilio") || summary.includes("entrega")) out.push("delivery");
-      return out.join(" | ");
+      const uri=(p.googleMapsUri||"").toLowerCase();
+      const summary=(p.editorialSummary?.text||"").toLowerCase();
+      const sites=["opentable","restorando","rappi","ubereats","didi food","didifood","doordash","justeat","seamless","postmates"];
+      const hit=sites.find(s=> uri.includes(s) || summary.includes(s));
+      const notes=[];
+      if(hit) notes.push(hit);
+      if(summary.includes("delivery")||summary.includes("domicilio")||summary.includes("entrega")) notes.push("delivery");
+      return notes.join(" | ");
     }
-
-    /******************  UI  ******************/
-    const rowsData = []; // para exportar CSV
 
     function pushRow(r){
       rowsData.push(r);
-      const tr = document.createElement("tr");
-      const header = Array.from(document.querySelectorAll("#tbl thead th")).map(th=>th.textContent);
-      header.forEach(h=>{
-        const td = document.createElement("td");
-        td.textContent = r[h] ?? "";
+      const tr=document.createElement("tr");
+      for(const k of header()){
+        const td=document.createElement("td");
+        td.textContent = r[k] ?? "";
         tr.appendChild(td);
-      });
+      }
       tbody.appendChild(tr);
-      resCountEl.textContent = rowsData.length;
+      $("#resCount").textContent = rowsData.length;
     }
-    function clearRows(){
-      rowsData.length = 0; tbody.innerHTML=""; resCountEl.textContent="0";
-    }
+    function clearRows(){ rowsData.length=0; tbody.innerHTML=""; $("#resCount").textContent="0"; }
 
-    /******************  START  ******************/
+    /* -------- handlers -------- */
     $("#btnStart").addEventListener("click", start);
-    $("#btnDownload").addEventListener("click", ()=>{
-      const csv = toCSV(rowsData);
-      downloadCSV(`maps-extractor-${new Date().toISOString().slice(0,10)}.csv`, csv);
-    });
+    $("#btnDownload").addEventListener("click", ()=>downloadCSV(`maps-extractor-${new Date().toISOString().slice(0,10)}.csv`, toCSV(rowsData)));
 
     async function start(){
-      clearLog(); clearRows();
-
-      const apiKey = $("#apiKey").value.trim();
-      if (!apiKey){ log("Coloca tu API Key", "warn"); return; }
-
-      // Cargamos Maps JS (Geocoder)
       try{
+        clearLog(); clearRows();
+        const apiKey=$("#apiKey").value.trim();
+        if(!apiKey){ log("Coloca tu API Key","warn"); return; }
         await loadMapsScript(apiKey);
-      }catch(e){
-        log("No se pudo cargar Google Maps JS.", "err"); return;
-      }
 
-      const state = $("#state").value.trim();
-      const city = $("#city").value.trim();
-      const colony = $("#colony").value.trim();
-      const cps = $("#postalCodes").value.trim();
-      const radiusKm = Math.max(1, parseFloat($("#radiusKm").value) || 3);
+        const state=$("#state").value.trim();
+        const city=$("#city").value.trim();
+        const colony=$("#colony").value.trim();
+        const colonia = colony; // <-- alias por si quedó alguna referencia a "colonia"
+        const cps=$("#postalCodes").value.trim();
+        const radiusKm=Math.max(1, parseFloat($("#radiusKm").value)||3);
 
-      const wantLatLng = $("#chkLatLng").checked;
-      const wantWebsite = $("#chkWebsite").checked;
-      const wantEmail = $("#chkEmail").checked;
+        const wantLatLng=$("#chkLatLng").checked;
+        const wantWebsite=$("#chkWebsite").checked;
+        const wantEmail=$("#chkEmail").checked;
 
-      const optHours = $("#chkHours").checked;
-      const optPrice = $("#chkPrice").checked;
-      const optMapsUri = $("#chkMapsUri").checked;
-      const optPhoto = $("#chkPhoto").checked;
-      const optTypes = $("#chkTypes").checked;
-      const optShort = $("#chkShortAddr").checked;
-      const optSummary = $("#chkSummary").checked;
-      const optPartners = $("#chkPartners").checked;
+        const optHours=$("#chkHours").checked;
+        const optPrice=$("#chkPrice").checked;
+        const optMapsUri=$("#chkMapsUri").checked;
+        const optPhoto=$("#chkPhoto").checked;
+        const optTypes=$("#chkTypes").checked;
+        const optShort=$("#chkShortAddr").checked;
+        const optSummary=$("#chkSummary").checked;
+        const optPartners=$("#chkPartners").checked;
 
-      // Keywords (una por línea)
-      const kwList = $("#keywords").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-      if (!kwList.length){ log("Agrega al menos una keyword.", "warn"); return; }
+        const kwList=$("#keywords").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+        if(!kwList.length){ log("Agrega al menos una keyword.","warn"); return; }
 
-      // Geocoding inteligente
-      const cpArr = cps ? cps.split(/[,\s;]+/).map(s=>s.trim()).filter(Boolean) : [];
-      const cp = cpArr[0] || ""; // usamos el primero para el bias
-      log("Iniciando...");
-      const geo = await geocodeSmart({ colonia, ciudad:city, estado:state, cp, country:"MX" });
+        const cpArr = cps? cps.split(/[,\s;]+/).map(s=>s.trim()).filter(Boolean):[];
+        const cp = cpArr[0] || "";
 
-      if (!geo.ok){
-        log(`⚠️ No se pudo geocodificar: ${[colony, city, state].filter(Boolean).join(", ")}`, "warn");
-      }
+        log("Iniciando…");
+        const geo = await geocodeSmart({ colonia:colony, ciudad:city, estado:state, cp, country:"MX" });
+        if(!geo.ok){ log(`⚠️ No se pudo geocodificar: ${[colony,city,state].filter(Boolean).join(", ")}`,"warn"); }
 
-      // Bias para Places
-      let bias = undefined;
-      if (geo.ok){
-        if (geo.viewport?.toJSON) {
-          bias = { rectangle: geo.viewport.toJSON() };
-        } else {
-          bias = { circle: { center: { latitude: geo.lat, longitude: geo.lng }, radius: radiusKm * 1000 } };
+        let bias=undefined;
+        if(geo.ok){
+          if(geo.viewport?.toJSON) bias={ rectangle: geo.viewport.toJSON() };
+          else bias={ circle:{ center:{ latitude:geo.lat, longitude:geo.lng }, radius: radiusKm*1000 } };
         }
-      }
 
-      // Por cada KW, hacemos la búsqueda y agregamos filas
-      for (let i=0;i<kwList.length;i++){
-        const kw = kwList[i];
-        const textQuery = colony
-          ? `${kw} @ ${colony}, ${city} ${state}`
-          : `${kw} @ ${city} ${state}`.trim();
+        for(const kw of kwList){
+          const textQuery = colony ? `${kw} @ ${colony}, ${city} ${state}` : `${kw} @ ${city} ${state}`.trim();
+          log(`Buscando "${kw}" @ "${[colony,city,state].filter(Boolean).join(", ")}" (radio ${radiusKm} km)…`);
+          try{
+            const places=await textSearchAll({apiKey,textQuery,bias,pageLimit:50,pageSize:20});
+            for(const p of places){
+              const comp=p.addressComponents||[];
+              const row={
+                "KW": kw,
+                "State": geo.state || pickComp(comp,"administrative_area_level_1") || state,
+                "City":  geo.city  || pickComp(comp,"locality") || city,
+                "Colony": geo.colony || pickComp(comp,"neighborhood") || "",
+                "Postal Code": geo.postalCode || pickComp(comp,"postal_code") || "",
+                "Company Name": p.displayName?.text || "",
+                "Category": p.primaryType || (p.types||[])[0] || "",
+                "Website": wantWebsite ? (p.websiteUri || "") : "",
+                "Phone": p.nationalPhoneNumber || p.internationalPhoneNumber || "",
+                "email": wantEmail ? "" : "",
+                "address": optShort ? (p.shortFormattedAddress || p.formattedAddress || "") : (p.formattedAddress || p.shortFormattedAddress || "")
+              };
+              if(wantLatLng){ row["Lat"]=p.location?.latitude??""; row["Lng"]=p.location?.longitude??""; } else { row["Lat"]=""; row["Lng"]=""; }
 
-        log(`Buscando "${kw}" @ "${[colony,city,state].filter(Boolean).join(", ")}" (radio ${radiusKm} km)…`);
-        try{
-          const places = await textSearchAll({ apiKey, textQuery, bias, pageLimit: 50, pageSize: 20 });
-          for (const p of places){
-            const comp = p.addressComponents || [];
-            const row = {
-              "KW": kw,
-              "State": geo.state || pickComp(comp,"administrative_area_level_1") || state,
-              "City":  geo.city  || pickComp(comp,"locality") || city,
-              "Colony": geo.colony || pickComp(comp,"neighborhood") || "",
-              "Postal Code": geo.postalCode || pickComp(comp,"postal_code") || "",
-              "Company Name": p.displayName?.text || "",
-              "Category": p.primaryType || (p.types||[])[0] || "",
-              "Website": wantWebsite ? (p.websiteUri || "") : "",
-              "Phone": p.nationalPhoneNumber || p.internationalPhoneNumber || "",
-              "email": wantEmail ? "" : "", // No lo entrega Google; placeholder
-              "address": optShort ? (p.shortFormattedAddress || p.formattedAddress || "") : (p.formattedAddress || p.shortFormattedAddress || "")
-            };
+              row["Horario"]= optHours ? (p.currentOpeningHours?.weekdayDescriptions?.join(" | ") || "") : "";
+              row["Precio"]=  optPrice ? (p.priceLevel || "") : "";
+              row["Tipo + Subtipos"]= optTypes ? [p.primaryType, ...(p.types||[])].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).join(" | ") : "";
+              row["Resumen"]= optSummary ? (p.editorialSummary?.text || "") : "";
+              row["Partners"]= optPartners ? detectPartners(p) : "";
+              row["Maps URI"]= optMapsUri ? (p.googleMapsUri || "") : "";
 
-            if (wantLatLng) {
-              row["Lat"] = p.location?.latitude ?? "";
-              row["Lng"] = p.location?.longitude ?? "";
-            } else { row["Lat"]=""; row["Lng"]=""; }
-
-            row["Horario"] = optHours ? (p.currentOpeningHours?.weekdayDescriptions?.join(" | ") || "") : "";
-            row["Precio"]  = optPrice ? (p.priceLevel || "") : "";
-            row["Tipo + Subtipos"] = optTypes ? [p.primaryType, ...(p.types||[])]
-                                                  .filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).join(" | ") : "";
-            row["Resumen"] = optSummary ? (p.editorialSummary?.text || "") : "";
-            row["Partners"] = optPartners ? detectPartners(p) : "";
-            row["Maps URI"] = optMapsUri ? (p.googleMapsUri || "") : "";
-
-            pushRow(row);
+              pushRow(row);
+            }
+          }catch(e){
+            log(`Error "${kw}" @ "${[colony,city,state].filter(Boolean).join(", ")}": ${e.message}`,"err");
           }
-
-        }catch(e){
-          log(`Error "${kw}" @ "${[colony,city,state].filter(Boolean).join(", ")}": ${e.message}`, "err");
         }
+        log("Proceso finalizado.");
+        updateMetrics().catch(()=>{});
+      }catch(e){
+        log(`Error general: ${e.message}`,"err");
       }
-
-      log("Proceso finalizado.");
-      updateMetrics().catch(()=>{});
     }
 
-    // Boot
+    // boot
     updateMetrics().catch(()=>{});
   </script>
 </body>
